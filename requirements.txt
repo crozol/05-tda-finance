@@ -1,0 +1,8 @@
+numpy>=1.26
+pandas>=2.2
+matplotlib>=3.8
+scikit-learn>=1.4
+giotto-tda>=0.6.0
+yfinance>=0.2.37
+jupyter>=1.0
+tqdm>=4.66
