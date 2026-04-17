@@ -1,46 +1,46 @@
-# TDA en series financieras — detección de cambios de régimen
+# TDA on financial time series — regime change detection
 
-Usar **homología persistente** sobre ventanas deslizantes de precios de múltiples activos para detectar cambios de régimen de mercado (ej. crisis 2008, caída 2020, normalidad).
+Using **persistent homology** on sliding windows of multi-asset price series to detect market regime changes (e.g. the 2008 crisis, the 2020 crash, normal periods).
 
-## Motivación
+## Motivation
 
-Los métodos clásicos de detección de cambios de régimen en finanzas usan varianza, correlaciones rolling, HMMs. El Topological Data Analysis (TDA) da un enfoque complementario: mira la **forma** de la nube de puntos en el espacio de retornos y extrae descriptores topológicos (barras de persistencia) que son invariantes ante transformaciones suaves.
+Classical methods for detecting regime changes in finance rely on variance, rolling correlations, and HMMs. Topological Data Analysis (TDA) offers a complementary angle: look at the **shape** of the return cloud in return space and extract topological descriptors (persistence bars) that are invariant under smooth transformations.
 
-Este proyecto aplica homología persistente a ventanas deslizantes de un índice multi-activo y muestra que los descriptores topológicos pican justo antes / durante crisis.
+This project applies persistent homology to sliding windows of a multi-asset index and shows that the topological descriptors spike just before / during crises.
 
 ## Stack
 
 - Python 3.11+
-- Giotto-TDA (o Ripser)
+- Giotto-TDA (or Ripser)
 - Pandas, NumPy
-- yfinance (datos de mercado)
-- scikit-learn (clasificador sobre features topológicos)
+- yfinance (market data)
+- scikit-learn (classifier over topological features)
 - Matplotlib
 
-## Estructura
+## Structure
 
 ```
 05-tda-finance/
 ├── README.md
 ├── requirements.txt
 ├── src/
-│   ├── data.py           # Descarga y normaliza precios
-│   ├── persistence.py    # Homología persistente de ventanas deslizantes
+│   ├── data.py           # Download and normalize prices
+│   ├── persistence.py    # Persistent homology over sliding windows
 │   ├── features.py       # Persistence landscapes / images
-│   └── classify.py       # Clasificador de regímenes
+│   └── classify.py       # Regime classifier
 └── notebooks/
 ```
 
 ## Roadmap
 
-- [ ] Descargar precios diarios de índices y sectores (SP500, NASDAQ, sector ETFs).
-- [ ] Calcular retornos log y normalizar.
-- [ ] Ventanas deslizantes → nubes de puntos en ℝ^d.
-- [ ] Homología persistente (dim 0 y 1) por ventana.
-- [ ] Convertir diagramas en persistence landscapes / images.
-- [ ] Entrenar clasificador (Random Forest) normal vs. crisis.
-- [ ] Gráfica temporal con anotaciones de eventos macro reales.
+- [ ] Download daily prices of indices and sectors (SP500, NASDAQ, sector ETFs).
+- [ ] Compute log returns and normalize.
+- [ ] Sliding windows → point clouds in ℝ^d.
+- [ ] Persistent homology (dim 0 and 1) per window.
+- [ ] Convert diagrams into persistence landscapes / images.
+- [ ] Train classifier (Random Forest) normal vs. crisis.
+- [ ] Temporal plot annotated with real macro events.
 
-## Resultado esperado
+## Expected results
 
-Curva temporal de "topological anomaly score" donde los picos coinciden con: crisis subprime (2008), default europeo (2011), selloff China (2015), COVID (2020). Clasificador con AUC > 0.85 separando régimen normal de crisis.
+Temporal "topological anomaly score" curve where peaks coincide with: subprime crisis (2008), European default (2011), China selloff (2015), COVID (2020). Classifier with AUC > 0.85 separating normal regime from crisis.
