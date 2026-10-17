@@ -34,7 +34,7 @@ anything.
 ## Evaluation design
 
 - **Labels fixed in advance.** Crisis periods are listed in `src/data.py`
-  (`CRISIS_PERIODS`: 2008–09, 2011, 2015, 2020, 2022) with the event that
+  (`CRISIS_PERIODS`: 2008–09, 2011, 2015, Q4 2018, 2020, 2022) with the event that
   bounds each one, and are not tuned afterwards. A window is labelled by its
   *last* day, so a window counts as "crisis" only once the crisis has begun.
 - **No leakage between overlapping windows.** With a 40-day window and a
@@ -62,6 +62,38 @@ every crisis is held out once, and demonstrates the leakage on synthetic
 data: a feature with no relation to the label, but slowly varying in time,
 reaches a ROC-AUC near 0.97 under shuffled k-fold and about 0.5 under purged
 walk-forward.
+
+## Analysis plan (fixed before any result)
+
+Committed before any feature is computed on market data. Any change made
+after the first result will be listed at the end of this section, with its
+date and reason.
+
+- **Episodes.** Six crisis periods (`src/data.py`). The 2015 episode lasts
+  ten trading days, about two windows at a 5-day step, so it is reported but
+  not counted: the effective number of episodes is 5 (2008–09, 2011, Q4 2018,
+  2020, 2022). With so few, the conclusion is qualitative; no p-value is
+  computed across episodes.
+- **Primary comparison.** Topological features plus the leading eigenvalue
+  share against the leading eigenvalue share alone. Realised volatility is a
+  secondary baseline.
+- **Success criterion.** The combined model has a higher ROC-AUC than the
+  eigenvalue alone in at least 4 of the 5 held-out episodes under
+  leave-one-crisis-out, and a higher ROC-AUC under purged walk-forward.
+  Average precision is reported alongside.
+- **"Detects earlier", defined.** For each episode and each score
+  (topology, eigenvalue, volatility), with the same rule for all three:
+  - threshold: the 95th percentile of the score on the normal windows of the
+    training fold;
+  - alarm: the first window, from 60 trading days before the start of the
+    crisis, after which the score exceeds the threshold for 3 consecutive
+    windows;
+  - lead time: trading days from the alarm to the drawdown minimum (the end
+    date of the episode). No alarm before the minimum counts as a miss.
+- **Fixed parameters.** Window 40 days, step 5, homology dimensions 0 and 1,
+  `L¹` and `L²` landscape norms, a random forest of 300 trees as the main
+  model (logistic regression as a check). These are the defaults in `src/`
+  and are not tuned on the held-out episodes.
 
 ## Stack
 
