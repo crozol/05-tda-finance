@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 
 from src.classify import make_logistic
-from src.data import crisis_labels
+from src.data import CRISIS_PERIODS, crisis_labels
 from src.features import leading_eigenvalue_share, realized_volatility
 from src.persistence import sliding_windows, standardize_windows
 from src.validation import evaluate, leave_one_crisis_out, purge_gap, purged_walk_forward
@@ -46,10 +46,12 @@ def test_leave_one_crisis_out_holds_out_each_episode_without_shared_days():
 
 
 def test_crisis_labels_use_inclusive_periods():
-    dates = pd.to_datetime(["2008-09-12", "2008-09-15", "2009-03-09", "2009-03-10", "2020-03-01"])
+    dates = pd.to_datetime(["2008-09-12", "2008-09-15", "2009-03-09", "2009-03-10",
+                            "2018-12-24", "2018-12-26", "2020-03-01"])
     y, ep = crisis_labels(dates)
-    assert y.tolist() == [0, 1, 1, 0, 1]
-    assert ep.tolist() == [-1, 0, 0, -1, 3]
+    k = list(CRISIS_PERIODS).index
+    assert y.tolist() == [0, 1, 1, 0, 1, 0, 1]
+    assert ep.tolist() == [-1, 0, 0, -1, k("q4 2018 selloff"), -1, k("covid crash")]
 
 
 def test_baselines_detect_volatility_and_comovement():

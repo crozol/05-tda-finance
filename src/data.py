@@ -17,6 +17,7 @@ CRISIS_PERIODS: dict[str, tuple[str, str]] = {
     "global financial crisis": ("2008-09-15", "2009-03-09"),   # Lehman to the market bottom
     "euro debt crisis": ("2011-08-01", "2011-10-03"),          # US downgrade selloff to the October 3 low
     "china devaluation": ("2015-08-11", "2015-08-25"),         # yuan devaluation to the August 25 low
+    "q4 2018 selloff": ("2018-09-21", "2018-12-24"),           # day after the S&P 500 peak to the December 24 low
     "covid crash": ("2020-02-20", "2020-03-23"),               # day after the S&P 500 peak to the trough
     "2022 drawdown": ("2022-01-04", "2022-10-12"),             # day after the S&P 500 peak to the October low
 }
