@@ -1,20 +1,75 @@
 # TDA on financial time series — regime change detection
 
-Using **persistent homology** on sliding windows of multi-asset price series to detect market regime changes (e.g. the 2008 crisis, the 2020 crash, normal periods).
+[![CI](https://img.shields.io/github/actions/workflow/status/crozol/05-tda-finance/tests.yml?label=CI&style=flat-square)](https://github.com/crozol/05-tda-finance/actions/workflows/tests.yml)
+[![Portfolio page](https://img.shields.io/badge/Portfolio-page-7C3AED?style=flat-square)](https://crozol.github.io/projects/05-tda-finance.html)
+
+**Status: in progress.** The data pipeline, features and evaluation design are
+implemented and tested; no result has been computed yet, and this document
+reports none.
+
+Using **persistent homology** on sliding windows of multi-asset returns to
+detect market regime changes (the 2008 crisis, the 2020 crash, normal periods).
 
 ## Motivation
 
-Classical methods for detecting regime changes in finance rely on variance, rolling correlations, and HMMs. Topological Data Analysis (TDA) offers a complementary angle: look at the **shape** of the return cloud in return space and extract topological descriptors (persistence bars) that are invariant under smooth transformations.
+Classical methods for detecting regime changes in finance rely on variance,
+rolling correlations and hidden Markov models. Topological Data Analysis
+offers a complementary angle: treat each window of daily returns as a point
+cloud in `ℝ^d` (one point per day, one axis per asset) and summarise its
+*shape* with persistence diagrams, which are stable under small perturbations
+of the data.
 
-This project applies persistent homology to sliding windows of a multi-asset index and shows that the topological descriptors spike just before / during crises.
+## Hypothesis
+
+Gidea & Katz (2018) found that the `L^p` norms of persistence landscapes of
+sliding windows of four US equity indices grow in the run-up to the 2000 and
+2008 crashes. The question this project tests is narrower and harder: **do
+topological features detect crisis regimes better than realised volatility
+and the leading eigenvalue of the correlation matrix, evaluated on the same
+leakage-free folds?** A crisis raises volatility and makes assets move
+together, and both effects also change a persistence diagram, so an
+improvement over a model with no baselines would not show that topology adds
+anything.
+
+## Evaluation design
+
+- **Labels fixed in advance.** Crisis periods are listed in `src/data.py`
+  (`CRISIS_PERIODS`: 2008–09, 2011, 2015, 2020, 2022) with the event that
+  bounds each one, and are not tuned afterwards. A window is labelled by its
+  *last* day, so a window counts as "crisis" only once the crisis has begun.
+- **No leakage between overlapping windows.** With a 40-day window and a
+  5-day step, neighbouring windows share 35 days, so shuffled k-fold puts
+  near-copies of every test window in the training set (López de Prado, 2018).
+  `src/validation.py` provides two schemes that avoid it:
+  - **purged walk-forward**: train on the past, test on the next block, and
+    drop the 7 windows in between, so no training window shares a day with a
+    test window;
+  - **leave one crisis out**: hold out each crisis with its surrounding
+    normal windows, train on the rest minus a purge gap on both sides.
+- **Baselines on identical folds.** Realised volatility and the share of
+  variance in the first principal component of the correlation matrix
+  (the one-component absorption ratio, Kritzman et al., 2011) are scored with
+  the same model and splits as the topological features, alone and combined.
+- **Scale removed from the topology.** Each window is standardised per asset
+  before computing persistence, so the diagrams describe the shape of the
+  joint distribution rather than re-measuring its volatility.
+- **Success criterion.** Topology plus baselines must beat baselines alone,
+  in ROC-AUC and average precision, under both split schemes.
+
+`tests/test_validation.py` checks that the purged splits share no day between
+training and test windows (and that one window less of purge would), that
+every crisis is held out once, and demonstrates the leakage on synthetic
+data: a feature with no relation to the label, but slowly varying in time,
+reaches a ROC-AUC near 0.97 under shuffled k-fold and about 0.5 under purged
+walk-forward.
 
 ## Stack
 
 - Python 3.11+
-- Giotto-TDA (or Ripser)
-- Pandas, NumPy
+- giotto-tda (persistent homology, landscapes)
+- pandas, NumPy
 - yfinance (market data)
-- scikit-learn (classifier over topological features)
+- scikit-learn (classifiers, metrics)
 - Matplotlib
 
 ## Structure
@@ -24,23 +79,36 @@ This project applies persistent homology to sliding windows of a multi-asset ind
 ├── README.md
 ├── requirements.txt
 ├── src/
-│   ├── data.py           # Download and normalize prices
-│   ├── persistence.py    # Persistent homology over sliding windows
-│   ├── features.py       # Persistence landscapes / images
-│   └── classify.py       # Regime classifier
-└── notebooks/
+│   ├── data.py           # prices, log returns, crisis periods and labels
+│   ├── persistence.py    # sliding windows, standardisation, Vietoris-Rips persistence
+│   ├── features.py       # landscapes, landscape norms, volatility and eigenvalue baselines
+│   ├── validation.py     # purged walk-forward, leave-one-crisis-out, fold scoring
+│   └── classify.py       # models and feature-set comparison on shared folds
+└── tests/
+    └── test_validation.py
 ```
 
 ## Roadmap
 
-- [ ] Download daily prices of indices and sectors (SP500, NASDAQ, sector ETFs).
-- [ ] Compute log returns and normalize.
-- [ ] Sliding windows → point clouds in ℝ^d.
-- [ ] Persistent homology (dim 0 and 1) per window.
-- [ ] Convert diagrams into persistence landscapes / images.
-- [ ] Train classifier (Random Forest) normal vs. crisis.
-- [ ] Temporal plot annotated with real macro events.
+- [x] Crisis labels fixed in advance; windows labelled by their last day.
+- [x] Leakage-free validation: purged walk-forward and leave-one-crisis-out, with tests.
+- [x] Baselines: realised volatility and leading eigenvalue of the correlation matrix.
+- [ ] Download daily prices of sector ETFs and indices; log returns.
+- [ ] Persistent homology (dimensions 0 and 1) on standardised windows.
+- [ ] Landscape norms and landscapes as features.
+- [ ] Compare feature sets on both split schemes.
+- [ ] Time series of the features annotated with the crisis periods.
 
-## Expected results
+## References
 
-Temporal "topological anomaly score" curve where peaks coincide with: subprime crisis (2008), European default (2011), China selloff (2015), COVID (2020). Classifier with AUC > 0.85 separating normal regime from crisis.
+- Gidea, M. & Katz, Y. (2018). *Topological data analysis of financial time
+  series: Landscapes of crashes.* Physica A 491, 820–834.
+- Bubenik, P. (2015). *Statistical topological data analysis using
+  persistence landscapes.* Journal of Machine Learning Research 16, 77–102.
+- López de Prado, M. (2018). *Advances in Financial Machine Learning*, ch. 7
+  (cross-validation in finance: purging and embargo). Wiley.
+- Kritzman, M., Li, Y., Page, S. & Rigobon, R. (2011). *Principal components
+  as a measure of systemic risk.* Journal of Portfolio Management 37(4), 112–126.
+- Tauzin, G. et al. (2021). *giotto-tda: A topological data analysis toolkit
+  for machine learning and data exploration.* Journal of Machine Learning
+  Research 22(39), 1–6.

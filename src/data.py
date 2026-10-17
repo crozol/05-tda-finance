@@ -1,4 +1,4 @@
-"""Descarga de precios y cálculo de retornos log normalizados."""
+"""Price download, log returns, and crisis labels."""
 
 from __future__ import annotations
 
@@ -7,6 +7,19 @@ import pandas as pd
 
 
 DEFAULT_TICKERS = ("SPY", "QQQ", "XLF", "XLE", "XLK", "XLY", "XLV")
+
+# Crisis episodes used as positive labels. These dates are a modelling choice,
+# fixed before any feature is computed and documented here so that they can be
+# changed and the analysis rerun; results must be reported for this exact
+# list. Each window is labelled by the date of its *last* day, so a window is
+# "crisis" only once the crisis has started, never in anticipation of it.
+CRISIS_PERIODS: dict[str, tuple[str, str]] = {
+    "global financial crisis": ("2008-09-15", "2009-03-09"),   # Lehman to the market bottom
+    "euro debt crisis": ("2011-08-01", "2011-10-03"),          # US downgrade selloff to the October 3 low
+    "china devaluation": ("2015-08-11", "2015-08-25"),         # yuan devaluation to the August 25 low
+    "covid crash": ("2020-02-20", "2020-03-23"),               # day after the S&P 500 peak to the trough
+    "2022 drawdown": ("2022-01-04", "2022-10-12"),             # day after the S&P 500 peak to the October low
+}
 
 
 def download_prices(tickers: tuple[str, ...] = DEFAULT_TICKERS, start: str = "2005-01-01", end: str | None = None) -> pd.DataFrame:
@@ -18,3 +31,15 @@ def download_prices(tickers: tuple[str, ...] = DEFAULT_TICKERS, start: str = "20
 
 def log_returns(prices: pd.DataFrame) -> pd.DataFrame:
     return np.log(prices / prices.shift(1)).dropna()
+
+
+def crisis_labels(dates: pd.DatetimeIndex,
+                  periods: dict[str, tuple[str, str]] = CRISIS_PERIODS) -> tuple[np.ndarray, np.ndarray]:
+    """For each date, (label, episode): label 1 inside a crisis period, else 0;
+    episode is the index of the period in ``periods`` (-1 outside), as needed
+    by ``validation.leave_one_crisis_out``."""
+    dates = pd.DatetimeIndex(dates)
+    episode = np.full(len(dates), -1)
+    for k, (start, end) in enumerate(periods.values()):
+        episode[(dates >= pd.Timestamp(start)) & (dates <= pd.Timestamp(end))] = k
+    return (episode >= 0).astype(int), episode
