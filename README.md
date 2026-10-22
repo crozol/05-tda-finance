@@ -5,7 +5,10 @@
 
 **Status: in progress.** The data pipeline, features and evaluation design are
 implemented and tested; no result has been computed yet, and this document
-reports none.
+reports none. The analysis plan, including the success criterion, was fixed
+before any result (section "Analysis plan"); a negative control in the tests
+shows that shuffled k-fold gives ROC-AUC ≈ 0.97 to an unrelated feature,
+against ≈ 0.5 with purged folds.
 
 Using **persistent homology** on sliding windows of multi-asset returns to
 detect market regime changes (the 2008 crisis, the 2020 crash, normal periods).
