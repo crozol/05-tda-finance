@@ -106,6 +106,21 @@ def calibrated_threshold(make_model: Callable[[], object], X: np.ndarray, y: np.
     return model, float(np.percentile(model.predict_proba(X[normal])[:, 1], q))
 
 
+def first_alarm(score: np.ndarray, threshold: float, start: int = 0, k: int = 3) -> int | None:
+    """Index of the first window ``i >= start`` that completes a run of ``k``
+    consecutive windows above the threshold (windows ``i - k + 1 .. i``, all at
+    or after ``start``). The alarm is raised on the last window of the run, the
+    first at which the run is known, so the rule never looks ahead. None if no
+    run completes."""
+    above = np.asarray(score)[start:] > threshold
+    run = 0
+    for j, a in enumerate(above):
+        run = run + 1 if a else 0
+        if run == k:
+            return start + j
+    return None
+
+
 def evaluate(make_model: Callable[[], object], X: np.ndarray, y: np.ndarray,
              splits: list[Split]) -> dict:
     """ROC-AUC and average precision per fold. Folds whose test or training

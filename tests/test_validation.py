@@ -9,7 +9,7 @@ from src.classify import make_logistic
 from src.data import CRISIS_PERIODS, crisis_labels
 from src.features import leading_eigenvalue_share, realized_volatility
 from src.persistence import sliding_windows, standardize_windows
-from src.validation import (calibrated_threshold, calibration_split, evaluate,
+from src.validation import (calibrated_threshold, calibration_split, evaluate, first_alarm,
                             leave_one_crisis_out, purge_gap, purged_walk_forward)
 
 WINDOW, STEP = 40, 5
@@ -145,3 +145,12 @@ def test_frozen_prices_round_trip_and_hash_check(tmp_path):
         pass
     else:
         raise AssertionError("a wrong hash must be refused")
+
+
+def test_first_alarm_is_raised_on_the_third_window_of_the_run():
+    """No look-ahead: the alarm is the window that completes the run, and a
+    run must start at or after the first window searched."""
+    s = np.array([1, 1, 0, 1, 1, 1, 1], dtype=float)
+    assert first_alarm(s, 0.5, k=3) == 5
+    assert first_alarm(s, 0.5, start=4, k=3) == 6
+    assert first_alarm(np.array([1, 1, 0, 1, 1]), 0.5, k=3) is None
