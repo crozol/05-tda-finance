@@ -73,6 +73,22 @@ def leave_one_crisis_out(episode: np.ndarray, gap: int, context: int) -> Iterato
         yield idx[keep], test
 
 
+def past_only_crisis_splits(episode: np.ndarray, gap: int, context: int) -> Iterator[Split]:
+    """Walk-forward counterpart of ``leave_one_crisis_out``: the same test block
+    per episode (the episode plus ``context`` windows on each side), but the
+    model is trained only on the windows that end before it, minus ``gap``
+    windows, as a detector running in real time would be. The first episode
+    has no earlier crisis to learn from, so its training set has a single
+    class and ``evaluate`` reports it as skipped."""
+    episode = np.asarray(episode)
+    idx = np.arange(len(episode))
+    for e in sorted(set(episode[episode >= 0].tolist())):
+        members = idx[episode == e]
+        lo = max(0, members.min() - context)
+        hi = min(len(episode), members.max() + context + 1)
+        yield idx[idx < lo - gap], np.arange(lo, hi)
+
+
 def calibration_split(train: np.ndarray, gap: int, frac: float = 0.2) -> Split:
     """Split a training fold into a fitting part and a calibration block.
 

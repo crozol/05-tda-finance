@@ -29,6 +29,23 @@ def make_logistic():
     return make_pipeline(StandardScaler(), LogisticRegression(class_weight="balanced", max_iter=2000))
 
 
+class SeedAverage:
+    """The mean predicted probability of one model per seed: with random
+    forests, a forest of ``len(seeds)`` times as many trees. Used where the
+    analysis plan needs one score per window rather than one per seed (the
+    alarm rule)."""
+
+    def __init__(self, make_model=make_random_forest, seeds=range(10)):
+        self.make_model, self.seeds = make_model, list(seeds)
+
+    def fit(self, X, y):
+        self.models_ = [self.make_model(s).fit(X, y) for s in self.seeds]
+        return self
+
+    def predict_proba(self, X):
+        return np.mean([m.predict_proba(X) for m in self.models_], axis=0)
+
+
 def compare_feature_sets(feature_sets: dict[str, np.ndarray], y: np.ndarray,
                          splits: list, make_model=make_random_forest) -> dict:
     """Evaluate every feature set on the same folds. Typical keys: "volatility",
