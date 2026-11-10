@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import hashlib
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
 
@@ -28,6 +31,28 @@ def download_prices(tickers: tuple[str, ...] = DEFAULT_TICKERS, start: str = "20
 
     df = yf.download(list(tickers), start=start, end=end, auto_adjust=True, progress=False)["Close"]
     return df.dropna(how="all").ffill().dropna()
+
+
+# Every result uses this copy: yfinance is unofficial and Yahoo revises adjusted
+# prices retroactively, so a new download need not match it. Downloaded with
+# yfinance 1.8.0 on 2026-11-10, 2005-01-03 to 2026-11-06 (README, analysis plan).
+FROZEN_PRICES = Path("data/prices_2026-11-10.csv")
+FROZEN_PRICES_SHA256 = "10535bf43cf79624dd9c81f2284d4520e49235981fa25061e9431c7aa1d6ae29"
+
+
+def freeze_prices(prices: pd.DataFrame, path: str | Path) -> str:
+    """Write the prices in the frozen format and return the file's SHA-256."""
+    prices.to_csv(path, float_format="%.10g")
+    return hashlib.sha256(Path(path).read_bytes()).hexdigest()
+
+
+def load_frozen_prices(path: str | Path = FROZEN_PRICES,
+                       sha256: str = FROZEN_PRICES_SHA256) -> pd.DataFrame:
+    """Read the frozen prices, refusing a file whose SHA-256 differs."""
+    digest = hashlib.sha256(Path(path).read_bytes()).hexdigest()
+    if digest != sha256:
+        raise ValueError(f"{path}: SHA-256 {digest} differs from the frozen {sha256}")
+    return pd.read_csv(path, index_col=0, parse_dates=True)
 
 
 def log_returns(prices: pd.DataFrame) -> pd.DataFrame:

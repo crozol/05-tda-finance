@@ -73,6 +73,39 @@ def leave_one_crisis_out(episode: np.ndarray, gap: int, context: int) -> Iterato
         yield idx[keep], test
 
 
+def calibration_split(train: np.ndarray, gap: int, frac: float = 0.2) -> Split:
+    """Split a training fold into a fitting part and a calibration block.
+
+    The calibration block is the last ``frac`` of the fold's windows; the
+    ``gap`` windows before it are dropped, so no fitting window shares a day
+    with a calibration window. A threshold set on the block is then out of
+    sample for a model fitted on the rest. Thresholds taken from the fold's own
+    training windows are degenerate for a random forest, which scores them near
+    0, and out-of-bag scores do not help: the bootstrap ignores time, so every
+    out-of-bag window has in-bag neighbours that share most of its days."""
+    train = np.sort(np.asarray(train))
+    n_cal = max(1, int(round(frac * len(train))))
+    cal = train[-n_cal:]
+    return train[train < cal[0] - gap], cal
+
+
+def calibrated_threshold(make_model: Callable[[], object], X: np.ndarray, y: np.ndarray,
+                         train: np.ndarray, gap: int, q: float = 95.0, frac: float = 0.2):
+    """(model, threshold): the model fitted on the fitting part of
+    ``calibration_split`` and the ``q``-th percentile of its score on the
+    normal windows of the calibration block. The same model must score the
+    held-out windows. None if the fitting part has a single class or the
+    block has no normal window."""
+    fit, cal = calibration_split(train, gap, frac)
+    X = np.asarray(X).reshape(len(y), -1)
+    normal = cal[y[cal] == 0]
+    if len(set(y[fit])) < 2 or len(normal) == 0:
+        return None
+    model = make_model()
+    model.fit(X[fit], y[fit])
+    return model, float(np.percentile(model.predict_proba(X[normal])[:, 1], q))
+
+
 def evaluate(make_model: Callable[[], object], X: np.ndarray, y: np.ndarray,
              splits: list[Split]) -> dict:
     """ROC-AUC and average precision per fold. Folds whose test or training

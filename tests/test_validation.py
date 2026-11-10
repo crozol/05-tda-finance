@@ -9,7 +9,8 @@ from src.classify import make_logistic
 from src.data import CRISIS_PERIODS, crisis_labels
 from src.features import leading_eigenvalue_share, realized_volatility
 from src.persistence import sliding_windows, standardize_windows
-from src.validation import evaluate, leave_one_crisis_out, purge_gap, purged_walk_forward
+from src.validation import (calibrated_threshold, calibration_split, evaluate,
+                            leave_one_crisis_out, purge_gap, purged_walk_forward)
 
 WINDOW, STEP = 40, 5
 
@@ -96,3 +97,51 @@ def test_shuffled_kfold_overstates_skill_on_overlapping_windows():
     assert leaky > 0.9
     assert purged["mean"]["roc_auc"] < 0.65
     assert evaluate(make_logistic, X, y, kfold)["n_scored"] == 5
+
+
+def test_calibration_block_is_purged_from_the_fitting_part():
+    """The calibration block shares no day with the windows the model is fitted
+    on, also inside a leave-one-crisis-out training fold with a hole in it."""
+    _, end = sliding_windows(np.zeros((1000, 3)), WINDOW, STEP)
+    episode = np.full(len(end), -1)
+    episode[60:70] = 0
+    episode[150:156] = 1
+    gap = purge_gap(WINDOW, STEP)
+    for train, _ in leave_one_crisis_out(episode, gap=gap, context=20):
+        fit, cal = calibration_split(train, gap)
+        assert len(cal) == round(0.2 * len(train)) and set(fit) | set(cal) <= set(train)
+        assert not _days(fit, end) & _days(cal, end)
+    fit, cal = calibration_split(np.arange(100), gap - 1)       # one window less leaks
+    assert _days(fit, end) & _days(cal, end)
+
+
+def test_calibrated_threshold_is_out_of_sample():
+    """A random forest scores its own training windows near 0, so a threshold
+    from them would be degenerate; on the purged calibration block it is not."""
+    from src.classify import make_random_forest
+    rng = np.random.default_rng(0)
+    n = 400
+    y = (rng.random(n) < 0.15).astype(int)
+    X = rng.normal(size=(n, 3)) + 0.8 * y[:, None]
+    train = np.arange(n)
+    model, thr = calibrated_threshold(lambda: make_random_forest(0), X, y, train, gap=7)
+    fit, _ = calibration_split(train, 7)
+    in_sample = np.percentile(model.predict_proba(X[fit][y[fit] == 0])[:, 1], 95)
+    assert thr > in_sample
+
+
+def test_frozen_prices_round_trip_and_hash_check(tmp_path):
+    from src.data import freeze_prices, load_frozen_prices
+    idx = pd.bdate_range("2020-01-01", periods=5)
+    prices = pd.DataFrame({"SPY": [300.1, 301.25, 299.9, 302.0, 303.5],
+                           "XLF": [30.01, 30.2, 29.95, 30.4, 30.6]}, index=idx)
+    f = tmp_path / "p.csv"
+    digest = freeze_prices(prices, f)
+    back = load_frozen_prices(f, digest)
+    np.testing.assert_allclose(back.to_numpy(), prices.to_numpy())
+    try:
+        load_frozen_prices(f, "0" * 64)
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("a wrong hash must be refused")
