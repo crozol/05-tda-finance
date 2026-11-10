@@ -68,26 +68,48 @@ walk-forward.
 
 ## Analysis plan (fixed before any result)
 
-Committed before any feature is computed on market data. Any change made
-after the first result will be listed at the end of this section, with its
-date and reason.
+Committed before any feature is computed on market data (`bb57e7e`,
+2026-10-17) and amended once, still before any result, on 2026-11-10 (list at
+the end of this section). Any change made after the first result will be
+listed there too, with its date and reason.
 
-- **Episodes.** Six crisis periods (`src/data.py`). The 2015 episode lasts
-  ten trading days, about two windows at a 5-day step, so it is reported but
-  not counted: the effective number of episodes is 5 (2008–09, 2011, Q4 2018,
-  2020, 2022). With so few, the conclusion is qualitative; no p-value is
-  computed across episodes.
+- **Data.** Daily adjusted closes of the seven tickers in `src/data.py`,
+  2005-01-03 to 2026-11-06, downloaded with yfinance 1.8.0 on 2026-11-10 and
+  frozen as `data/prices_2026-11-10.csv` (SHA-256
+  `10535bf43cf79624dd9c81f2284d4520e49235981fa25061e9431c7aa1d6ae29`). Every
+  result uses this file; Yahoo revises adjusted prices retroactively, so a new
+  download need not match it.
+- **Episodes.** Six crisis periods (`src/data.py`). A window is positive when
+  its last day falls inside one; on the frozen data that gives 24 positive
+  windows for 2008–09, 9 for 2011, 2 for 2015, 13 for Q4 2018, 5 for 2020 and
+  39 for 2022 (1 092 windows in all). The 2015 episode is reported but not
+  counted, so the effective number of episodes is 5. The 2020 AUC rests on
+  5 positive windows and counts as much as the 2022 one, which rests on 39;
+  every episode is reported with its number of positive windows. With so few
+  episodes, the conclusion is qualitative; no p-value is computed across
+  episodes.
 - **Primary comparison.** Topological features plus the leading eigenvalue
   share against the leading eigenvalue share alone. Realised volatility is a
   secondary baseline.
-- **Success criterion.** The combined model has a higher ROC-AUC than the
-  eigenvalue alone in at least 4 of the 5 held-out episodes under
-  leave-one-crisis-out, and a higher ROC-AUC under purged walk-forward.
-  Average precision is reported alongside.
-- **"Detects earlier", defined.** For each episode and each score
-  (topology, eigenvalue, volatility), with the same rule for all three:
-  - threshold: the 95th percentile of the score on the normal windows of the
-    training fold;
+- **Seeds.** Every random forest is fitted with 10 seeds (0–9); every ROC-AUC
+  and average precision is the mean over them.
+- **Success criterion.** For each held-out episode under leave-one-crisis-out,
+  ΔAUC is the ROC-AUC of the combined model minus that of the eigenvalue
+  alone, averaged over the 10 seeds. An episode counts as a win only if that
+  mean exceeds the standard deviation of ΔAUC across the seeds. The combined
+  model succeeds if it wins in at least 4 of the 5 episodes and, by the same
+  rule, under purged walk-forward. If topology added nothing and each episode
+  were a coin flip, 4 of 5 would still happen with probability 6/32 ≈ 0.19:
+  the criterion is a filter, not evidence on its own. Average precision is
+  reported alongside.
+- **"Detects earlier", defined.** For each episode and each score — the
+  random-forest probability of the combined model, of the eigenvalue alone and
+  of volatility alone — with the same rule for all three:
+  - threshold: the last 20 % of the windows of the training fold form a
+    calibration block, separated from the rest by the same 7-window purge. The
+    model is fitted on the rest, the threshold is the 95th percentile of its
+    score on the normal windows of the calibration block, and that same model
+    scores the held-out episode;
   - alarm: the first window, from 60 trading days before the start of the
     crisis, after which the score exceeds the threshold for 3 consecutive
     windows;
@@ -97,6 +119,27 @@ date and reason.
   `L¹` and `L²` landscape norms, a random forest of 300 trees as the main
   model (logistic regression as a check). These are the defaults in `src/`
   and are not tuned on the held-out episodes.
+
+**Amendments before any result (2026-11-10).** An external review of the plan
+found four problems; all are fixed above, and none of them uses a feature or a
+score computed on market data.
+
+1. *Threshold.* The 95th percentile of the score on the normal windows of the
+   training fold is degenerate for a random forest, which scores its own
+   training windows near 0. Out-of-bag scores do not fix it: the bootstrap
+   ignores time, so every out-of-bag window has in-bag neighbours that share
+   35 of its 40 days, the leakage the negative control demonstrates. The
+   threshold now comes from a purged calibration block inside the training
+   fold, and the three scores are now of the same kind (model probabilities),
+   with the combined model in place of topology alone, as in the primary
+   comparison.
+2. *Success criterion.* "Higher ROC-AUC in at least 4 of 5 episodes", by any
+   margin, passes by chance with probability 0.19, and the random-forest seed
+   alone can flip a small difference. Now: the mean over 10 seeds, a margin
+   equal to the spread between seeds, and the 0.19 stated.
+3. *Positive windows per episode,* added: the 2020 episode has 5.
+4. *Frozen data* with its SHA-256, since yfinance is unofficial and adjusted
+   prices change retroactively.
 
 ## Stack
 
@@ -128,7 +171,7 @@ date and reason.
 - [x] Crisis labels fixed in advance; windows labelled by their last day.
 - [x] Leakage-free validation: purged walk-forward and leave-one-crisis-out, with tests.
 - [x] Baselines: realised volatility and leading eigenvalue of the correlation matrix.
-- [ ] Download daily prices of sector ETFs and indices; log returns.
+- [x] Daily prices of sector ETFs and indices, frozen with their SHA-256 (analysis plan); log returns.
 - [ ] Persistent homology (dimensions 0 and 1) on standardised windows.
 - [ ] Landscape norms and landscapes as features.
 - [ ] Compare feature sets on both split schemes.
