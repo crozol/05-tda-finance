@@ -111,8 +111,9 @@ listed there too, with its date and reason.
     score on the normal windows of the calibration block, and that same model
     scores the held-out episode;
   - alarm: the first window, from 60 trading days before the start of the
-    crisis, after which the score exceeds the threshold for 3 consecutive
-    windows;
+    crisis, that completes a run of 3 consecutive windows above the
+    threshold: the alarm is raised on the third window of the run, the first
+    at which the run is known, with no look-ahead;
   - lead time: trading days from the alarm to the drawdown minimum (the end
     date of the episode). No alarm before the minimum counts as a miss.
 - **Fixed parameters.** Window 40 days, step 5, homology dimensions 0 and 1,
@@ -121,8 +122,9 @@ listed there too, with its date and reason.
   and are not tuned on the held-out episodes.
 
 **Amendments before any result (2026-11-10).** An external review of the plan
-found four problems; all are fixed above, and none of them uses a feature or a
-score computed on market data.
+found four problems, and one definition needed to be made precise; all are
+fixed above, and none of them uses a feature or a score computed on market
+data.
 
 1. *Threshold.* The 95th percentile of the score on the normal windows of the
    training fold is degenerate for a random forest, which scores its own
@@ -140,6 +142,10 @@ score computed on market data.
 3. *Positive windows per episode,* added: the 2020 episode has 5.
 4. *Frozen data* with its SHA-256, since yfinance is unofficial and adjusted
    prices change retroactively.
+5. *Alarm time.* "The first window after which the score exceeds the threshold
+   for 3 consecutive windows" could be read as the first window of the run,
+   which is only known two windows later. The alarm is now the third window
+   of the run.
 
 ## Stack
 

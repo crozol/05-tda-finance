@@ -1,0 +1,21 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+type: software
+title: "TDA on financial time series: regime change detection"
+abstract: "Persistent homology over sliding windows of multi-asset returns, tested against realised volatility and the leading eigenvalue of the correlation matrix on leakage-free folds (purged walk-forward, leave-one-crisis-out). Version 0.1.0 records the analysis plan, fixed before any result."
+authors:
+  - given-names: "Camilo Andrés"
+    family-names: "Rozo Lozano"
+    affiliation: "Universidad Nacional de Colombia"
+    email: rozol.ca555@gmail.com
+repository-code: "https://github.com/crozol/05-tda-finance"
+license: MIT
+version: "0.1.0"
+date-released: 2026-11-10
+keywords:
+  - topological data analysis
+  - persistent homology
+  - persistence landscapes
+  - financial time series
+  - regime change detection
+  - pre-registration
