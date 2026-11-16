@@ -56,8 +56,8 @@ anything.
 - **Scale removed from the topology.** Each window is standardised per asset
   before computing persistence, so the diagrams describe the shape of the
   joint distribution rather than re-measuring its volatility.
-- **Success criterion.** Topology plus baselines must beat baselines alone,
-  in ROC-AUC and average precision, under both split schemes.
+- **Success criterion.** Defined in the analysis plan below, before any
+  result.
 
 `tests/test_validation.py` checks that the purged splits share no day between
 training and test windows (and that one window less of purge would), that
@@ -69,9 +69,9 @@ walk-forward.
 ## Analysis plan (fixed before any result)
 
 Committed before any feature is computed on market data (`bb57e7e`,
-2026-10-17) and amended once, still before any result, on 2026-11-10 (list at
-the end of this section). Any change made after the first result will be
-listed there too, with its date and reason.
+2026-10-17) and amended twice, still before any result, on 2026-11-10 and
+2026-11-16 (lists at the end of this section). Any change made after the first
+result will be listed there too, with its date and reason.
 
 - **Data.** Daily adjusted closes of the seven tickers in `src/data.py`,
   2005-01-03 to 2026-11-06, downloaded with yfinance 1.8.0 on 2026-11-10 and
@@ -91,17 +91,30 @@ listed there too, with its date and reason.
 - **Primary comparison.** Topological features plus the leading eigenvalue
   share against the leading eigenvalue share alone. Realised volatility is a
   secondary baseline.
+- **Splits.** Under leave-one-crisis-out, the test block of an episode is its
+  positive windows plus 12 normal windows (60 trading days) on each side, the
+  stretch over which the alarm is searched; the model is trained on every
+  other window except the 7-window purge on each side. The walk-forward uses
+  the same test blocks but trains only on the windows that end before the
+  block, minus the purge, as a detector running in real time would. The
+  2008–09 episode has no earlier crisis to learn from and cannot be scored
+  this way, so the walk-forward scores four counted episodes: 2011, Q4 2018,
+  2020 and 2022.
 - **Seeds.** Every random forest is fitted with 10 seeds (0–9); every ROC-AUC
-  and average precision is the mean over them.
-- **Success criterion.** For each held-out episode under leave-one-crisis-out,
-  ΔAUC is the ROC-AUC of the combined model minus that of the eigenvalue
-  alone, averaged over the 10 seeds. An episode counts as a win only if that
-  mean exceeds the standard deviation of ΔAUC across the seeds. The combined
-  model succeeds if it wins in at least 4 of the 5 episodes and, by the same
-  rule, under purged walk-forward. If topology added nothing and each episode
-  were a coin flip, 4 of 5 would still happen with probability 6/32 ≈ 0.19:
-  the criterion is a filter, not evidence on its own. Average precision is
-  reported alongside.
+  and average precision is the mean over them. The alarm rule needs one score
+  per window, so it uses the probability averaged over the 10 forests, which
+  is itself a forest of 3 000 trees: one threshold and one alarm per score and
+  episode.
+- **Success criterion.** For each held-out episode, ΔAUC is the ROC-AUC of
+  the combined model minus that of the eigenvalue alone, averaged over the 10
+  seeds. An episode counts as a win only if that mean exceeds the standard
+  deviation of ΔAUC across the seeds. The combined model succeeds if it wins
+  in at least 4 of the 5 counted episodes under leave-one-crisis-out and in
+  at least 3 of the 4 that the walk-forward can score. If topology added
+  nothing and each episode were a coin flip, 4 of 5 would still happen with
+  probability 6/32 ≈ 0.19 and 3 of 4 with probability 5/16 ≈ 0.31, so the two
+  together pass by chance with probability at most 0.19: the criterion is a
+  filter, not evidence on its own. Average precision is reported alongside.
 - **"Detects earlier", defined.** For each episode and each score — the
   random-forest probability of the combined model, of the eigenvalue alone and
   of volatility alone — with the same rule for all three:
@@ -116,10 +129,16 @@ listed there too, with its date and reason.
     at which the run is known, with no look-ahead;
   - lead time: trading days from the alarm to the drawdown minimum (the end
     date of the episode). No alarm before the minimum counts as a miss.
-- **Fixed parameters.** Window 40 days, step 5, homology dimensions 0 and 1,
-  `L¹` and `L²` landscape norms, a random forest of 300 trees as the main
-  model (logistic regression as a check). These are the defaults in `src/`
-  and are not tuned on the held-out episodes.
+- **Fixed parameters.** Window 40 days, step 5, homology dimensions 0 and 1.
+  For each dimension, the `L¹` and `L²` norms of the persistence landscape
+  summed over all its layers, `‖λ‖_p = (Σ_k ‖λ_k‖_p^p)^{1/p}`, as in Gidea &
+  Katz (2018, eq. 2.3): four features. Gidea & Katz use dimension 1 only,
+  windows of 50 and 100 days and a step of one day. The integrals are Riemann
+  sums on giotto-tda's default grid, 100 points per dimension from the
+  smallest birth to the largest death over all windows: the grid uses no
+  label, but its range includes later windows. A random forest of 300 trees
+  as the main model (logistic regression as a check). These are the defaults
+  in `src/` and are not tuned on the held-out episodes.
 
 **Amendments before any result (2026-11-10).** An external review of the plan
 found four problems, and one definition needed to be made precise; all are
@@ -147,6 +166,26 @@ data.
    which is only known two windows later. The alarm is now the third window
    of the run.
 
+**Second amendment before any result (2026-11-16).** Writing
+`scripts/run_plan.py`, which runs the plan end to end, showed four points the
+plan left open. They are fixed above. Only a synthetic dry run has been
+executed; no feature or score has been computed on market data.
+
+6. *Test blocks.* "The surrounding normal windows" of a held-out episode had
+   no number: now 12 on each side (60 trading days), the stretch the alarm
+   search covers.
+7. *Walk-forward.* "By the same rule" cannot apply as written: trained only on
+   the past, 2008–09 has no earlier crisis to learn from, which leaves four
+   counted episodes. The walk-forward now uses the leave-one-crisis-out test
+   blocks with past-only training and needs 3 of 4 (5/16 ≈ 0.31 by chance).
+8. *One alarm per episode.* With 10 seeds the rule gave ten thresholds and ten
+   alarms per score; it now uses the probability averaged over the seeds.
+9. *Landscape norms.* The plan named the norms but not how they are computed.
+   giotto-tda's default keeps only the first landscape layer, while the norm
+   of Gidea & Katz (2018), whose finding the hypothesis tests, sums over all
+   layers; the features now use their definition (`c730476`). The grid of the
+   Riemann sums stays at giotto-tda's default and is stated above.
+
 ## Stack
 
 - Python 3.11+
@@ -161,15 +200,21 @@ data.
 ```
 05-tda-finance/
 ├── README.md
-├── requirements.txt
+├── LICENSE
+├── CITATION.cff
+├── requirements.txt      # the pinned environment of the analysis plan
 ├── src/
 │   ├── data.py           # prices, log returns, crisis periods and labels
 │   ├── persistence.py    # sliding windows, standardisation, Vietoris-Rips persistence
 │   ├── features.py       # landscapes, landscape norms, volatility and eigenvalue baselines
-│   ├── validation.py     # purged walk-forward, leave-one-crisis-out, fold scoring
-│   └── classify.py       # models and feature-set comparison on shared folds
+│   ├── validation.py     # purged walk-forward, leave-one-crisis-out, fold scoring, alarm rule
+│   └── classify.py       # models, seed average and feature-set comparison on shared folds
+├── scripts/
+│   └── run_plan.py       # the analysis plan end to end: synthetic dry run by default, --data frozen
 └── tests/
-    └── test_validation.py
+    ├── test_validation.py
+    ├── test_features.py
+    └── test_plan.py
 ```
 
 ## Roadmap
