@@ -5,7 +5,8 @@ Every step follows the section "Analysis plan (fixed before any result)":
 * 40-day windows with a 5-day step, labelled by their last day
   (``src/data.py``), persistent homology in dimensions 0 and 1 of each
   standardised window, and the ``L¹`` and ``L²`` norms of its persistence
-  landscapes (four topological features);
+  landscapes, summed over all layers as in Gidea & Katz (2018, eq. 2.3), on
+  giotto-tda's default grid (four topological features);
 * the primary comparison, topology plus the leading eigenvalue share against
   the eigenvalue share alone, with realised volatility as a secondary
   baseline, under leave-one-crisis-out and under a walk-forward scheme that
