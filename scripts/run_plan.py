@@ -7,13 +7,15 @@ Every step follows the section "Analysis plan (fixed before any result)":
   standardised window, and the ``L¹`` and ``L²`` norms of its persistence
   landscapes, summed over all layers as in Gidea & Katz (2018, eq. 2.3), on
   giotto-tda's default grid (four topological features);
-* the primary comparison, topology plus the leading eigenvalue share against
-  the eigenvalue share alone, with realised volatility as a secondary
-  baseline, under leave-one-crisis-out and under a walk-forward scheme that
+* the primary comparison, topology plus the eigenvalue spectrum of the
+  correlation matrix against the spectrum alone (amendment 7), and as
+  secondary comparisons topology plus the leading eigenvalue share against
+  that share alone (the primary comparison before amendment 7) and realised
+  volatility, under leave-one-crisis-out and under a walk-forward scheme that
   trains only on the past;
 * a random forest of 300 trees fitted with seeds 0-9; ROC-AUC and average
   precision are means over the seeds, and an episode is a win when the mean
-  ΔAUC (combined minus eigenvalue) exceeds its standard deviation across seeds;
+  ΔAUC (combined minus its control) exceeds its standard deviation across seeds;
 * the alarm rule: a threshold at the 95th percentile of the score on the
   normal windows of a purged calibration block (the last 20 % of the training
   fold), the alarm on the window that completes a run of 3 above it, searched
@@ -23,7 +25,9 @@ Every step follows the section "Analysis plan (fixed before any result)":
 
 By default it runs on synthetic prices with the crisis periods of
 ``src/data.py`` injected as high-volatility, high-correlation regimes, a dry
-run of the whole pipeline that computes nothing on market data. ``--data
+run of the whole pipeline that computes nothing on market data
+(scripts/calibrate_plan.py uses the same generator to measure how often the
+criterion passes when topology has nothing to add, and when it has). ``--data
 frozen`` runs it on the frozen prices, whose SHA-256 is checked on loading;
 that run is the first result of the project.
 
@@ -45,8 +49,8 @@ import pandas as pd
 
 from src.classify import SeedAverage, make_logistic, make_random_forest
 from src.data import CRISIS_PERIODS, crisis_labels, load_frozen_prices, log_returns
-from src.features import (landscape_norms, leading_eigenvalue_share, realized_volatility,
-                          stack_features)
+from src.features import (correlation_spectrum, landscape_norms, leading_eigenvalue_share,
+                          realized_volatility, stack_features)
 from src.persistence import persistence_diagrams, sliding_windows, standardize_windows
 from src.validation import (calibrated_threshold, evaluate, first_alarm, leave_one_crisis_out,
                             past_only_crisis_splits, purge_gap)
@@ -59,24 +63,43 @@ SEEDS = tuple(range(10))
 NOT_COUNTED = ("china devaluation",)          # reported, not counted (2 positive windows)
 LOCO_MIN_WINS = 4                             # of the 5 counted episodes
 WF_MIN_WINS = 3                               # of the counted episodes the walk-forward can score
-COMBINED, BASELINE = "topology + eigenvalue", "eigenvalue"
+COMBINED, BASELINE = "topology + spectrum", "spectrum"          # primary (amendment 7)
+SECONDARY = ("topology + eigenvalue", "eigenvalue")              # primary before amendment 7
 ALARM_SCORES = (COMBINED, BASELINE, "volatility")
 
 
 def synthetic_prices(seed: int = 0, start: str = "2005-01-03", end: str = "2026-11-06",
-                     n_assets: int = 7) -> pd.DataFrame:
+                     n_assets: int = 7, crisis: str = "gaussian", df: float = 3.0) -> pd.DataFrame:
     """One-factor returns on business days, with every crisis period of
     ``src/data.py`` (and the 30 calendar days before it) at twice the
-    volatility and a higher factor correlation (0.7 against 0.3)."""
+    volatility and a higher factor correlation (0.7 against 0.3).
+
+    crisis="gaussian" (the default) keeps the returns Gaussian throughout, so
+    crises change only volatility and correlation: topology on standardised
+    windows has nothing to add to the correlation spectrum
+    (src.features.correlation_spectrum). crisis="heavy-tailed" also makes the
+    returns of those days multivariate Student t with ``df`` degrees of
+    freedom (every asset of a day divided by the same sqrt(W / df), W
+    chi-squared), rescaled to the same variance: the correlation is the same,
+    the joint tails are heavier. The extra draws come after the Gaussian ones,
+    so both versions share them for a given seed."""
     dates = pd.bdate_range(start, end)
     rng = np.random.default_rng(seed)
     sigma, rho = np.full(len(dates), 0.01), np.full(len(dates), 0.3)
+    in_crisis = np.zeros(len(dates), dtype=bool)
     for s, e in CRISIS_PERIODS.values():
         m = (dates >= pd.Timestamp(s) - pd.Timedelta(days=30)) & (dates <= pd.Timestamp(e))
         sigma[m], rho[m] = 0.02, 0.7
+        in_crisis |= m
     common = rng.normal(size=(len(dates), 1))
     idio = rng.normal(size=(len(dates), n_assets))
-    r = sigma[:, None] * (np.sqrt(rho)[:, None] * common + np.sqrt(1 - rho)[:, None] * idio)
+    z = np.sqrt(rho)[:, None] * common + np.sqrt(1 - rho)[:, None] * idio
+    if crisis == "heavy-tailed":
+        w = rng.chisquare(df, size=len(dates))
+        z = z * np.where(in_crisis, np.sqrt((df - 2) / w), 1.0)[:, None]
+    elif crisis != "gaussian":
+        raise ValueError(f"crisis must be 'gaussian' or 'heavy-tailed', not {crisis!r}")
+    r = sigma[:, None] * z
     return pd.DataFrame(100 * np.exp(np.cumsum(r, axis=0)), index=dates,
                         columns=[f"S{i}" for i in range(n_assets)])
 
@@ -87,13 +110,14 @@ def build_features(prices: pd.DataFrame) -> dict:
     windows, end = sliding_windows(returns.to_numpy(), WINDOW, STEP)
     y, episode = crisis_labels(returns.index[end])
     topo = landscape_norms(persistence_diagrams(standardize_windows(windows)))
-    eig, vol = leading_eigenvalue_share(windows), realized_volatility(windows)
-    sets = {COMBINED: stack_features(topo, eig),
-            BASELINE: eig,
+    spec, eig = correlation_spectrum(windows), leading_eigenvalue_share(windows)
+    vol = realized_volatility(windows)
+    sets = {COMBINED: stack_features(topo, spec),
+            BASELINE: spec,
+            SECONDARY[0]: stack_features(topo, eig),
+            SECONDARY[1]: eig,
             "volatility": vol,
-            "topology": topo,
-            "volatility + eigenvalue": stack_features(vol, eig),
-            "topology + volatility + eigenvalue": stack_features(topo, vol, eig)}
+            "topology": topo}
     return {"returns": returns, "end": end, "y": y, "episode": episode, "sets": sets}
 
 
@@ -185,6 +209,7 @@ def run(prices: pd.DataFrame, seeds=SEEDS, make_model=make_random_forest) -> dic
         rf = scores_by_episode(data["sets"], y, splits, seeds, make_model)
         lr = scores_by_episode(data["sets"], y, splits, [0], lambda s: make_logistic())
         crit = criterion(rf[COMBINED]["roc_auc"] - rf[BASELINE]["roc_auc"], counted)
+        crit2 = criterion(rf[SECONDARY[0]]["roc_auc"] - rf[SECONDARY[1]]["roc_auc"], counted)
         crit_lr = criterion(lr[COMBINED]["roc_auc"] - lr[BASELINE]["roc_auc"], counted)
         need = LOCO_MIN_WINS if scheme == "leave one crisis out" else WF_MIN_WINS
         table = {}
@@ -196,12 +221,16 @@ def run(prices: pd.DataFrame, seeds=SEEDS, make_model=make_random_forest) -> dic
                 "logistic": {name: {m: _num(v[m][0, k]) for m in v} for name, v in lr.items()},
                 "delta_auc": {"mean": _num(crit["mean"][k]), "sd": _num(crit["sd"][k]),
                               "win": bool(crit["win"][k])},
+                "delta_auc_secondary": {"mean": _num(crit2["mean"][k]), "sd": _num(crit2["sd"][k]),
+                                        "win": bool(crit2["win"][k])},
                 "delta_auc_logistic": _num(crit_lr["mean"][k]),
             }
         res["schemes"][scheme] = {
             "episodes": table,
             "wins": crit["wins_counted"], "scorable": crit["scorable_counted"],
             "min_wins": need, "passes": crit["wins_counted"] >= need,
+            "secondary": {"comparison": f"{SECONDARY[0]} vs {SECONDARY[1]}",
+                          "wins": crit2["wins_counted"], "passes": crit2["wins_counted"] >= need},
             "logistic_wins": int(((crit_lr["mean"] > 0) & counted).sum()),
             "alarms": alarms(data, splits, seeds, make_model),
         }
@@ -227,7 +256,8 @@ def report(res: dict) -> None:
           f"positives {res['positives']}")
     for scheme, s in res["schemes"].items():
         print(f"\n== {scheme}: {s['wins']} wins of {s['scorable']} scorable counted episodes "
-              f"(needs {s['min_wins']}) -> {'PASS' if s['passes'] else 'FAIL'}")
+              f"(needs {s['min_wins']}) -> {'PASS' if s['passes'] else 'FAIL'}; secondary "
+              f"({s['secondary']['comparison']}): {s['secondary']['wins']} wins")
         for ep, t in s["episodes"].items():
             rf = t["random_forest"]
             f = lambda name: (f"{rf[name]['roc_auc']['mean']:.3f}" if rf[name]["roc_auc"]["mean"] is not None
@@ -235,7 +265,8 @@ def report(res: dict) -> None:
             d = t["delta_auc"]
             dd = f"{d['mean']:+.3f} ± {d['sd']:.3f}" if d["mean"] is not None else "not scorable"
             print(f"  {ep:26s} n+ {t['n_positive']:3d}{'' if t['counted'] else ' (not counted)':15s}"
-                  f" AUC comb {f(COMBINED)}  eig {f(BASELINE)}  vol {f('volatility')}  ΔAUC {dd}"
+                  f" AUC comb {f(COMBINED)}  spec {f(BASELINE)}  eig {f(SECONDARY[1])}  "
+                  f"vol {f('volatility')}  ΔAUC {dd}"
                   f"{'  win' if d['win'] else ''}")
         for ep, per in s["alarms"].items():
             print(f"  alarm {ep:26s} " + "  ".join(

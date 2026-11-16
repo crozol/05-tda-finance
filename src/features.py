@@ -64,6 +64,26 @@ def realized_volatility(windows: np.ndarray) -> np.ndarray:
     return windows.std(axis=1, ddof=1).mean(axis=1, keepdims=True)
 
 
+def correlation_spectrum(windows: np.ndarray) -> np.ndarray:
+    """All eigenvalues of the correlation matrix of each window, in decreasing
+    order, divided by the number of assets (each row sums to 1; the first
+    column is ``leading_eigenvalue_share``). Shape (n_windows, n_assets).
+
+    This is the complete co-movement control for topology computed on
+    standardised windows. If the days of a window are independent Gaussian
+    draws with a common distribution, the standardised window is a uniformly
+    random rotation, within the subspace orthogonal to the vector of ones, of
+    a matrix fixed by its correlation matrix R; the pairwise distances between
+    its days, all that Vietoris-Rips persistence uses, then depend on R only
+    through its eigenvalues. Topology can add to the spectrum only through
+    structure a Gaussian does not have."""
+    d = windows.shape[2]
+    out = np.empty((windows.shape[0], d))
+    for i, w in enumerate(windows):
+        out[i] = np.linalg.eigvalsh(np.corrcoef(w, rowvar=False))[::-1] / d
+    return out
+
+
 def leading_eigenvalue_share(windows: np.ndarray) -> np.ndarray:
     """Largest eigenvalue of the correlation matrix of each window divided by
     the number of assets: the fraction of total variance in the first

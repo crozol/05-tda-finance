@@ -43,6 +43,42 @@ def test_the_norm_matches_the_integral():
     assert out[0, 3] == pytest.approx(np.sqrt(0.75), rel=1e-3)
 
 
+def test_correlation_spectrum_is_complete_and_extends_the_leading_eigenvalue():
+    from src.features import correlation_spectrum, leading_eigenvalue_share
+
+    rng = np.random.default_rng(1)
+    w = rng.normal(size=(6, 40, 7)) @ np.linalg.cholesky(0.4 * np.ones((7, 7)) + 0.6 * np.eye(7)).T
+    spec = correlation_spectrum(w)
+    assert spec.shape == (6, 7)
+    np.testing.assert_allclose(spec.sum(axis=1), 1.0)                     # trace of R is 7
+    assert np.all(np.diff(spec, axis=1) <= 1e-12)                         # decreasing
+    np.testing.assert_allclose(spec[:, :1], leading_eigenvalue_share(w))
+    np.testing.assert_allclose(correlation_spectrum(w * np.arange(1, 8)), spec)   # scale-free
+
+
+def test_the_gram_matrix_of_the_days_is_a_frame_times_the_spectrum():
+    """The decomposition behind the primary comparison. A standardised window z (n days, d
+    assets) with correlation matrix R = V Λ V^T satisfies z z^T = n q Λ q^T, where
+    q = z V Λ^(-1/2) / sqrt(n) has orthonormal columns orthogonal to the vector of ones. The
+    distances between days, all that Vietoris-Rips persistence uses, are a function of z z^T.
+    For independent Gaussian days the frame q is uniformly distributed given R (the
+    distribution is invariant under orthogonal maps of the days that fix the vector of ones),
+    so given R those distances depend on it only through Λ. This test checks the
+    decomposition."""
+    rng = np.random.default_rng(2)
+    n, d = 40, 7
+    z = rng.normal(size=(n, d))
+    z = (z - z.mean(0)) / z.std(0)                                          # a standardised window
+    r = z.T @ z / n
+    lam, v = np.linalg.eigh(r)
+    gram_from_z = z @ z.T
+    # the Gram matrix of the days is fixed by an orthonormal frame q and the spectrum alone
+    q = z @ v / np.sqrt(n * lam)                                            # orthonormal columns, q ⟂ 1
+    np.testing.assert_allclose(q.T @ q, np.eye(d), atol=1e-10)
+    np.testing.assert_allclose(q.T @ np.ones(n), 0, atol=1e-10)
+    np.testing.assert_allclose(gram_from_z, n * q @ np.diag(lam) @ q.T, atol=1e-9)
+
+
 def test_asking_for_more_layers_changes_nothing():
     """The number of layers used is enough: requesting more only adds zeros."""
     from gtda.diagrams import Amplitude

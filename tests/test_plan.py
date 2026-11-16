@@ -73,6 +73,38 @@ def test_lead_time_counts_trading_days_to_the_minimum_and_never_looks_ahead():
     assert run_plan.lead_time(late, 0.5, end_rows, start_row, end_row) == {"alarm": False, "lead_days": None}
 
 
+def test_heavy_tailed_crises_keep_the_gaussian_draws_and_fatten_only_the_crisis_tails():
+    g = run_plan.log_returns(run_plan.synthetic_prices(seed=1))
+    h = run_plan.log_returns(run_plan.synthetic_prices(seed=1, crisis="heavy-tailed"))
+    _, episode = run_plan.crisis_labels(g.index)
+    calm = (episode < 0) & (g.index < "2008-01-01")           # well away from every crisis
+    np.testing.assert_allclose(g.to_numpy()[calm], h.to_numpy()[calm])
+
+    def kurtosis(x):
+        z = (x - x.mean()) / x.std()
+        return float((z ** 4).mean())
+
+    crisis_days = (episode >= 0)
+    assert kurtosis(h.to_numpy()[crisis_days].ravel()) > kurtosis(g.to_numpy()[crisis_days].ravel()) + 1
+    with pytest.raises(ValueError):
+        run_plan.synthetic_prices(crisis="other")
+
+
+def test_calibration_records_both_comparisons(tmp_path):
+    pytest.importorskip("gtda")
+    from sklearn.ensemble import RandomForestClassifier
+    from scripts import calibrate_plan
+
+    small = lambda s: RandomForestClassifier(n_estimators=10, min_samples_leaf=5,     # noqa: E731
+                                             class_weight="balanced", random_state=s)
+    res = calibrate_plan.criteria(run_plan.synthetic_prices(seed=0), seeds=(0, 1), make_model=small)
+    for scheme in calibrate_plan.SCHEMES:
+        assert set(res["schemes"][scheme]) == {"primary", "secondary"}
+    assert res["schemes"]["walk-forward"]["primary"]["scorable"] == 4
+    assert set(res["success"]) == {"primary", "secondary"}
+    assert calibrate_plan.clopper_pearson(0, 20)[1] == pytest.approx(1 - 0.025 ** (1 / 20))
+
+
 def test_dry_run_on_synthetic_prices():
     pytest.importorskip("gtda")
     from sklearn.ensemble import RandomForestClassifier
@@ -85,7 +117,8 @@ def test_dry_run_on_synthetic_prices():
     assert loco["scorable"] == 5 and wf["scorable"] == 4      # walk-forward cannot score 2008
     gfc = wf["episodes"]["global financial crisis"]
     assert gfc["delta_auc"]["mean"] is None
-    assert not wf["alarms"]["global financial crisis"]["eigenvalue"]["scorable"]
+    assert not wf["alarms"]["global financial crisis"]["spectrum"]["scorable"]
+    assert set(loco["secondary"]) == {"comparison", "wins", "passes"}
     # the injected regimes are easy: every score ranks the held-out crisis well
     for t in loco["episodes"].values():
         assert t["random_forest"]["volatility"]["roc_auc"]["mean"] > 0.8
