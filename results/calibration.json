@@ -1,4 +1,14 @@
 {
+  "primary": "spectrum + volatility",
+  "setting": {
+    "name": "plan",
+    "window": 40,
+    "step": 5,
+    "homology_dims": [
+      0,
+      1
+    ]
+  },
   "null": {
     "n_datasets": 20,
     "seeds": [
@@ -23,7 +33,54 @@
       18,
       19
     ],
-    "primary": {
+    "eigenvalue": {
+      "comparison": "topology + eigenvalue vs eigenvalue",
+      "rates": {
+        "leave one crisis out": {
+          "passes": 13,
+          "rate": 0.65,
+          "ci95": [
+            0.40781146546717184,
+            0.8460907952154588
+          ]
+        },
+        "walk-forward": {
+          "passes": 11,
+          "rate": 0.55,
+          "ci95": [
+            0.3152781330405485,
+            0.7694221032240758
+          ]
+        },
+        "criterion": {
+          "passes": 8,
+          "rate": 0.4,
+          "ci95": [
+            0.19119006072530717,
+            0.6394574126925103
+          ]
+        }
+      },
+      "wins_histogram": {
+        "leave one crisis out": [
+          0,
+          0,
+          2,
+          5,
+          10,
+          3
+        ],
+        "walk-forward": [
+          0,
+          3,
+          6,
+          10,
+          1,
+          0
+        ]
+      }
+    },
+    "spectrum": {
       "comparison": "topology + spectrum vs spectrum",
       "rates": {
         "leave one crisis out": {
@@ -70,48 +127,95 @@
         ]
       }
     },
-    "secondary": {
-      "comparison": "topology + eigenvalue vs eigenvalue",
+    "spectrum + volatility": {
+      "comparison": "topology + spectrum + volatility vs spectrum + volatility",
       "rates": {
         "leave one crisis out": {
-          "passes": 13,
-          "rate": 0.65,
+          "passes": 3,
+          "rate": 0.15,
           "ci95": [
-            0.40781146546717184,
-            0.8460907952154588
+            0.03207093718546371,
+            0.378926826545314
           ]
         },
         "walk-forward": {
-          "passes": 11,
-          "rate": 0.55,
+          "passes": 6,
+          "rate": 0.3,
           "ci95": [
-            0.3152781330405485,
-            0.7694221032240758
+            0.1189315904057277,
+            0.5427891822762891
           ]
         },
         "criterion": {
-          "passes": 8,
-          "rate": 0.4,
+          "passes": 3,
+          "rate": 0.15,
           "ci95": [
-            0.19119006072530717,
-            0.6394574126925103
+            0.03207093718546371,
+            0.378926826545314
           ]
         }
       },
       "wins_histogram": {
         "leave one crisis out": [
-          0,
-          0,
+          4,
+          7,
+          4,
           2,
-          5,
-          10,
-          3
+          3,
+          0
         ],
         "walk-forward": [
-          0,
-          3,
+          5,
+          5,
+          4,
+          5,
+          1,
+          0
+        ]
+      }
+    },
+    "spectrum + volatility + kurtosis": {
+      "comparison": "topology + spectrum + volatility + kurtosis vs spectrum + volatility + kurtosis",
+      "rates": {
+        "leave one crisis out": {
+          "passes": 2,
+          "rate": 0.1,
+          "ci95": [
+            0.012348527170294808,
+            0.31698271401908235
+          ]
+        },
+        "walk-forward": {
+          "passes": 4,
+          "rate": 0.2,
+          "ci95": [
+            0.05733399705003276,
+            0.43661400299666825
+          ]
+        },
+        "criterion": {
+          "passes": 1,
+          "rate": 0.05,
+          "ci95": [
+            0.0012650894979498038,
+            0.24873276277202766
+          ]
+        }
+      },
+      "wins_histogram": {
+        "leave one crisis out": [
+          5,
           6,
-          10,
+          3,
+          4,
+          2,
+          0
+        ],
+        "walk-forward": [
+          9,
+          1,
+          6,
+          3,
           1,
           0
         ]
@@ -142,7 +246,54 @@
       18,
       19
     ],
-    "primary": {
+    "eigenvalue": {
+      "comparison": "topology + eigenvalue vs eigenvalue",
+      "rates": {
+        "leave one crisis out": {
+          "passes": 6,
+          "rate": 0.3,
+          "ci95": [
+            0.1189315904057277,
+            0.5427891822762891
+          ]
+        },
+        "walk-forward": {
+          "passes": 12,
+          "rate": 0.6,
+          "ci95": [
+            0.36054258730748967,
+            0.8088099392746928
+          ]
+        },
+        "criterion": {
+          "passes": 5,
+          "rate": 0.25,
+          "ci95": [
+            0.08657146910143462,
+            0.49104587170795755
+          ]
+        }
+      },
+      "wins_histogram": {
+        "leave one crisis out": [
+          0,
+          0,
+          5,
+          9,
+          4,
+          2
+        ],
+        "walk-forward": [
+          0,
+          1,
+          7,
+          8,
+          4,
+          0
+        ]
+      }
+    },
+    "spectrum": {
       "comparison": "topology + spectrum vs spectrum",
       "rates": {
         "leave one crisis out": {
@@ -189,52 +340,107 @@
         ]
       }
     },
-    "secondary": {
-      "comparison": "topology + eigenvalue vs eigenvalue",
+    "spectrum + volatility": {
+      "comparison": "topology + spectrum + volatility vs spectrum + volatility",
       "rates": {
         "leave one crisis out": {
-          "passes": 6,
-          "rate": 0.3,
+          "passes": 2,
+          "rate": 0.1,
           "ci95": [
-            0.1189315904057277,
-            0.5427891822762891
+            0.012348527170294808,
+            0.31698271401908235
           ]
         },
         "walk-forward": {
-          "passes": 12,
-          "rate": 0.6,
+          "passes": 2,
+          "rate": 0.1,
           "ci95": [
-            0.36054258730748967,
-            0.8088099392746928
+            0.012348527170294808,
+            0.31698271401908235
           ]
         },
         "criterion": {
-          "passes": 5,
-          "rate": 0.25,
+          "passes": 0,
+          "rate": 0.0,
           "ci95": [
-            0.08657146910143462,
-            0.49104587170795755
+            0.0,
+            0.16843347098308528
           ]
         }
       },
       "wins_histogram": {
         "leave one crisis out": [
-          0,
-          0,
-          5,
-          9,
-          4,
-          2
+          1,
+          6,
+          10,
+          1,
+          2,
+          0
         ],
         "walk-forward": [
+          6,
+          6,
+          6,
+          2,
           0,
-          1,
+          0
+        ]
+      }
+    },
+    "spectrum + volatility + kurtosis": {
+      "comparison": "topology + spectrum + volatility + kurtosis vs spectrum + volatility + kurtosis",
+      "rates": {
+        "leave one crisis out": {
+          "passes": 2,
+          "rate": 0.1,
+          "ci95": [
+            0.012348527170294808,
+            0.31698271401908235
+          ]
+        },
+        "walk-forward": {
+          "passes": 2,
+          "rate": 0.1,
+          "ci95": [
+            0.012348527170294808,
+            0.31698271401908235
+          ]
+        },
+        "criterion": {
+          "passes": 1,
+          "rate": 0.05,
+          "ci95": [
+            0.0012650894979498038,
+            0.24873276277202766
+          ]
+        }
+      },
+      "wins_histogram": {
+        "leave one crisis out": [
+          2,
           7,
-          8,
+          7,
+          2,
+          1,
+          1
+        ],
+        "walk-forward": [
           4,
+          10,
+          4,
+          2,
+          0,
           0
         ]
       }
     }
+  },
+  "regime_fraction_auc": {
+    "global financial crisis": 0.9903846153846154,
+    "euro debt crisis": 0.9750000000000001,
+    "china devaluation": 0.9166666666666667,
+    "q4 2018 selloff": 0.9821428571428572,
+    "covid crash": 0.9625,
+    "2022 drawdown": 0.99375
   }
 }
