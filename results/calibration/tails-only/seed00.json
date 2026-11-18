@@ -1,0 +1,184 @@
+{
+  "scenario": "tails-only",
+  "seed": 0,
+  "schemes": {
+    "leave one crisis out": {
+      "eigenvalue": {
+        "wins": 5,
+        "scorable": 5,
+        "passes": true,
+        "delta_auc": {
+          "global financial crisis": 0.35152243589743587,
+          "euro debt crisis": 0.3160416666666667,
+          "china devaluation": 0.3770833333333333,
+          "q4 2018 selloff": 0.5001488095238095,
+          "covid crash": 0.5216666666666667,
+          "2022 drawdown": 0.20401041666666667
+        },
+        "sd": {
+          "global financial crisis": 0.007147447874736067,
+          "euro debt crisis": 0.017431800531014754,
+          "china devaluation": 0.0386026169713536,
+          "q4 2018 selloff": 0.014554115802242468,
+          "covid crash": 0.014803236216082497,
+          "2022 drawdown": 0.006298279958831203
+        }
+      },
+      "spectrum": {
+        "wins": 2,
+        "scorable": 5,
+        "passes": false,
+        "delta_auc": {
+          "global financial crisis": 0.0014423076923076761,
+          "euro debt crisis": 0.017500000000000016,
+          "china devaluation": 0.19791666666666669,
+          "q4 2018 selloff": 0.0008928571428571619,
+          "covid crash": 0.05749999999999998,
+          "2022 drawdown": -0.0030208333333333393
+        },
+        "sd": {
+          "global financial crisis": 0.010232176230821257,
+          "euro debt crisis": 0.010900787150193665,
+          "china devaluation": 0.020246360745990625,
+          "q4 2018 selloff": 0.005258872333610549,
+          "covid crash": 0.006148873228105138,
+          "2022 drawdown": 0.0029646353064078155
+        }
+      },
+      "spectrum + volatility": {
+        "wins": 1,
+        "scorable": 5,
+        "passes": false,
+        "delta_auc": {
+          "global financial crisis": 0.009134615384615385,
+          "euro debt crisis": -0.017916666666666636,
+          "china devaluation": 0.05000000000000003,
+          "q4 2018 selloff": -0.017261904761904766,
+          "covid crash": -0.0191666666666666,
+          "2022 drawdown": -0.020729166666666698
+        },
+        "sd": {
+          "global financial crisis": 0.007168875068107181,
+          "euro debt crisis": 0.004831257536368352,
+          "china devaluation": 0.024453912307859725,
+          "q4 2018 selloff": 0.0060832181415698015,
+          "covid crash": 0.008827915878928172,
+          "2022 drawdown": 0.0052071757972965114
+        }
+      },
+      "spectrum + volatility + kurtosis": {
+        "wins": 0,
+        "scorable": 5,
+        "passes": false,
+        "delta_auc": {
+          "global financial crisis": -0.012179487179487202,
+          "euro debt crisis": -0.00874999999999997,
+          "china devaluation": -0.01458333333333336,
+          "q4 2018 selloff": -0.0172619047619048,
+          "covid crash": -0.016666666666666618,
+          "2022 drawdown": -0.004895833333333333
+        },
+        "sd": {
+          "global financial crisis": 0.01849247566104173,
+          "euro debt crisis": 0.0036483126490454727,
+          "china devaluation": 0.014061428285636543,
+          "q4 2018 selloff": 0.004819427699004416,
+          "covid crash": 0.005555555555555554,
+          "2022 drawdown": 0.0061537731198924705
+        }
+      }
+    },
+    "walk-forward": {
+      "eigenvalue": {
+        "wins": 4,
+        "scorable": 4,
+        "passes": true,
+        "delta_auc": {
+          "global financial crisis": null,
+          "euro debt crisis": 0.2512499999999999,
+          "china devaluation": 0.23958333333333331,
+          "q4 2018 selloff": 0.5919642857142857,
+          "covid crash": 0.5033333333333332,
+          "2022 drawdown": 0.22583333333333333
+        },
+        "sd": {
+          "global financial crisis": null,
+          "euro debt crisis": 0.015220853547552735,
+          "china devaluation": 0.02024636074599061,
+          "q4 2018 selloff": 0.011263307126575405,
+          "covid crash": 0.022204854324123745,
+          "2022 drawdown": 0.010132703592761689
+        }
+      },
+      "spectrum": {
+        "wins": 3,
+        "scorable": 4,
+        "passes": true,
+        "delta_auc": {
+          "global financial crisis": null,
+          "euro debt crisis": 0.019999999999999962,
+          "china devaluation": 0.21874999999999994,
+          "q4 2018 selloff": 0.03333333333333335,
+          "covid crash": 0.06166666666666667,
+          "2022 drawdown": 0.000520833333333337
+        },
+        "sd": {
+          "global financial crisis": null,
+          "euro debt crisis": 0.0017568209223157484,
+          "china devaluation": 0.022502571869471726,
+          "q4 2018 selloff": 0.009850945704211437,
+          "covid crash": 0.01054092553389458,
+          "2022 drawdown": 0.008842244151560348
+        }
+      },
+      "spectrum + volatility": {
+        "wins": 0,
+        "scorable": 4,
+        "passes": false,
+        "delta_auc": {
+          "global financial crisis": null,
+          "euro debt crisis": -0.0012499999999999844,
+          "china devaluation": 0.20625,
+          "q4 2018 selloff": -0.01874999999999998,
+          "covid crash": -0.009999999999999986,
+          "2022 drawdown": -0.023541666666666704
+        },
+        "sd": {
+          "global financial crisis": null,
+          "euro debt crisis": 0.004831257536368333,
+          "china devaluation": 0.006588078458684112,
+          "q4 2018 selloff": 0.008065665327054671,
+          "covid crash": 0.009460770203292484,
+          "2022 drawdown": 0.00859261005346249
+        }
+      },
+      "spectrum + volatility + kurtosis": {
+        "wins": 0,
+        "scorable": 4,
+        "passes": false,
+        "delta_auc": {
+          "global financial crisis": null,
+          "euro debt crisis": -0.001666666666666694,
+          "china devaluation": 0.0,
+          "q4 2018 selloff": -0.005654761904761852,
+          "covid crash": -0.017499999999999905,
+          "2022 drawdown": -0.005208333333333348
+        },
+        "sd": {
+          "global financial crisis": null,
+          "euro debt crisis": 0.004479032082388088,
+          "china devaluation": 0.0,
+          "q4 2018 selloff": 0.003829416481273571,
+          "covid crash": 0.008286907716764559,
+          "2022 drawdown": 0.00704784136464735
+        }
+      }
+    }
+  },
+  "success": {
+    "eigenvalue": true,
+    "spectrum": false,
+    "spectrum + volatility": false,
+    "spectrum + volatility + kurtosis": false
+  }
+}
