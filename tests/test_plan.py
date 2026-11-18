@@ -90,7 +90,7 @@ def test_heavy_tailed_crises_keep_the_gaussian_draws_and_fatten_only_the_crisis_
         run_plan.synthetic_prices(crisis="other")
 
 
-def test_calibration_records_both_comparisons(tmp_path):
+def test_calibration_records_every_comparison(tmp_path):
     pytest.importorskip("gtda")
     from sklearn.ensemble import RandomForestClassifier
     from scripts import calibrate_plan
@@ -99,9 +99,16 @@ def test_calibration_records_both_comparisons(tmp_path):
                                              class_weight="balanced", random_state=s)
     res = calibrate_plan.criteria(run_plan.synthetic_prices(seed=0), seeds=(0, 1), make_model=small)
     for scheme in calibrate_plan.SCHEMES:
-        assert set(res["schemes"][scheme]) == {"primary", "secondary"}
-    assert res["schemes"]["walk-forward"]["primary"]["scorable"] == 4
-    assert set(res["success"]) == {"primary", "secondary"}
+        assert set(res["schemes"][scheme]) == set(calibrate_plan.COMPARISONS)
+    for name in calibrate_plan.COMPARISONS:
+        assert res["schemes"]["walk-forward"][name]["scorable"] == 4
+    assert set(res["success"]) == set(calibrate_plan.COMPARISONS)
+    # each side of a comparison is the control plus topology: four topological columns more
+    data = run_plan.build_features(run_plan.synthetic_prices(seed=0))
+    sets = calibrate_plan.feature_sets(data)
+    for with_topology, control in calibrate_plan.COMPARISONS.values():
+        assert sets[with_topology].shape[1] == sets[control].shape[1] + 4
+        np.testing.assert_array_equal(sets[with_topology][:, 4:], sets[control])
     assert calibrate_plan.clopper_pearson(0, 20)[1] == pytest.approx(1 - 0.025 ** (1 / 20))
 
 

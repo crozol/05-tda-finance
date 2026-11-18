@@ -4,18 +4,29 @@ How often does the criterion of the analysis plan pass when topology has nothing
 often when it has? Every dataset comes from scripts.run_plan.synthetic_prices, with the crisis
 periods of src/data.py:
 
-* null: crises change only volatility and correlation, and returns stay Gaussian. Topology on
-  standardised windows then has nothing to add to the eigenvalue spectrum of the correlation
-  matrix (src.features.correlation_spectrum), whatever it adds to the leading eigenvalue alone;
+* null: crises change only volatility and correlation, and returns stay Gaussian, so topology
+  has no shape of its own to detect;
 * heavy-tailed: the same, and crisis returns are also multivariate Student t with 3 degrees of
-  freedom at the same correlation, a structure the spectrum does not see.
+  freedom at the same correlation.
 
 For each dataset the script applies the win rule of the plan (10 random-forest seeds, a win when
 the mean ΔAUC exceeds its standard deviation across seeds, leave-one-crisis-out and the
-past-only walk-forward) to the primary comparison, topology + spectrum against the spectrum,
-and to the secondary one, topology + eigenvalue against the leading eigenvalue (the primary
-comparison before amendment 7). No market data are used. --summarize gives the pass rates with
-exact (Clopper-Pearson) 95% intervals.
+past-only walk-forward) to four comparisons of topology plus a control against the control
+alone, each named by its control:
+
+* eigenvalue: the leading eigenvalue share of the correlation matrix (the primary comparison of
+  plan v0.1.1);
+* spectrum: all its eigenvalues. For independent Gaussian days with one distribution, topology
+  on standardised windows has nothing to add to them (src.features.correlation_spectrum);
+* spectrum + volatility: the spectrum and realised volatility, the two baselines the hypothesis
+  names. Standardising removes the volatility level of a window, not a change of volatility
+  inside it, and the diagrams can see that change;
+* spectrum + volatility + kurtosis: the same and Mardia's multivariate kurtosis, the leading
+  summary of what the persistence of independent elliptical days depends on besides the
+  spectrum (src.features.mardia_kurtosis).
+
+No market data are used. --summarize gives the pass rates with exact (Clopper-Pearson) 95%
+intervals.
 
 Usage:
     python -m scripts.calibrate_plan --scenario null --seeds 0 1 2 3
@@ -33,14 +44,23 @@ from pathlib import Path
 
 import numpy as np
 
-from scripts.run_plan import (BASELINE, COMBINED, CONTEXT, GAP, LOCO_MIN_WINS, NOT_COUNTED,
-                              SECONDARY, SEEDS, WF_MIN_WINS, _num, build_features, criterion,
-                              scores_by_episode, synthetic_prices)
+from scripts.run_plan import (CONTEXT, GAP, LOCO_MIN_WINS, NOT_COUNTED, SEEDS, STEP, WF_MIN_WINS,
+                              WINDOW, _num, build_features, criterion, scores_by_episode,
+                              synthetic_prices)
 from src.classify import make_random_forest
 from src.data import CRISIS_PERIODS
+from src.features import mardia_kurtosis, stack_features
+from src.persistence import sliding_windows
 from src.validation import leave_one_crisis_out, past_only_crisis_splits
 
-COMPARISONS = {"primary": (COMBINED, BASELINE), "secondary": SECONDARY}
+# topology plus a control against the control alone, keyed by the control
+COMPARISONS = {
+    "eigenvalue": ("topology + eigenvalue", "eigenvalue"),
+    "spectrum": ("topology + spectrum", "spectrum"),
+    "spectrum + volatility": ("topology + spectrum + volatility", "spectrum + volatility"),
+    "spectrum + volatility + kurtosis": ("topology + spectrum + volatility + kurtosis",
+                                         "spectrum + volatility + kurtosis"),
+}
 SCENARIOS = {"null": "gaussian", "heavy-tailed": "heavy-tailed"}
 SCHEMES = ("leave one crisis out", "walk-forward")
 
@@ -52,6 +72,20 @@ def clopper_pearson(k: int, n: int, alpha: float = 0.05) -> list[float]:
     return [lo, hi]
 
 
+def feature_sets(data: dict) -> dict:
+    """Both sides of every comparison. The sets of run_plan are reused; the others stack
+    topology, spectrum, volatility and kurtosis in that order."""
+    s = data["sets"]
+    windows, end = sliding_windows(data["returns"].to_numpy(), WINDOW, STEP)
+    assert np.array_equal(end, data["end"])
+    topo, spec, vol, kurt = s["topology"], s["spectrum"], s["volatility"], mardia_kurtosis(windows)
+    stacked = {"topology + spectrum + volatility": stack_features(topo, spec, vol),
+               "spectrum + volatility": stack_features(spec, vol),
+               "topology + spectrum + volatility + kurtosis": stack_features(topo, spec, vol, kurt),
+               "spectrum + volatility + kurtosis": stack_features(spec, vol, kurt)}
+    return {k: s[k] if k in s else stacked[k] for pair in COMPARISONS.values() for k in pair}
+
+
 def criteria(prices, seeds=SEEDS, make_model=make_random_forest) -> dict:
     """The win rule of the plan for both comparisons and both schemes, on one dataset."""
     data = build_features(prices)
@@ -59,7 +93,7 @@ def criteria(prices, seeds=SEEDS, make_model=make_random_forest) -> dict:
     names = list(CRISIS_PERIODS)
     episodes = sorted(set(episode[episode >= 0].tolist()))
     counted = np.array([names[e] not in NOT_COUNTED for e in episodes])
-    sets = {k: data["sets"][k] for pair in COMPARISONS.values() for k in pair}
+    sets = feature_sets(data)
     splits = {"leave one crisis out": list(leave_one_crisis_out(episode, GAP, CONTEXT)),
               "walk-forward": list(past_only_crisis_splits(episode, GAP, CONTEXT))}
     out = {}
@@ -91,10 +125,9 @@ def main(scenario: str, seeds: list[int], out_dir: str = "results/calibration") 
                **criteria(synthetic_prices(seed, crisis=SCENARIOS[scenario]))}
         f.write_text(json.dumps(res, indent=2))
         s = res["schemes"]
-        print(f"{scenario} seed {seed}: primary LOCO {s[SCHEMES[0]]['primary']['wins']}/5, "
-              f"WF {s[SCHEMES[1]]['primary']['wins']}/4; secondary LOCO "
-              f"{s[SCHEMES[0]]['secondary']['wins']}/5, WF {s[SCHEMES[1]]['secondary']['wins']}/4 "
-              f"({time.time() - t0:.0f} s)", flush=True)
+        print(f"{scenario} seed {seed}: " + "; ".join(
+            f"{name} LOCO {s[SCHEMES[0]][name]['wins']}/5 WF {s[SCHEMES[1]][name]['wins']}/4"
+            for name in COMPARISONS) + f" ({time.time() - t0:.0f} s)", flush=True)
 
 
 def summarize(out_dir: str = "results/calibration",
@@ -120,7 +153,7 @@ def summarize(out_dir: str = "results/calibration",
             summary[scenario][name] = {"comparison": " vs ".join(COMPARISONS[name]),
                                        "rates": rates, "wins_histogram": wins}
             c = rates["criterion"]
-            print(f"{scenario:12s} {name:9s} ({' vs '.join(COMPARISONS[name])}): criterion passes "
+            print(f"{scenario:12s} {' vs '.join(COMPARISONS[name])}: criterion passes "
                   f"{c['passes']}/{n} = {c['rate']:.2f} [{c['ci95'][0]:.2f}, {c['ci95'][1]:.2f}]; "
                   f"LOCO {rates['leave one crisis out']['passes']}/{n}, "
                   f"WF {rates['walk-forward']['passes']}/{n}")

@@ -79,6 +79,34 @@ def test_the_gram_matrix_of_the_days_is_a_frame_times_the_spectrum():
     np.testing.assert_allclose(gram_from_z, n * q @ np.diag(lam) @ q.T, atol=1e-9)
 
 
+def test_mardia_kurtosis_matches_the_formula_and_its_gaussian_mean():
+    from src.features import mardia_kurtosis
+
+    rng = np.random.default_rng(3)
+    n, d = 40, 7
+    w = rng.normal(size=(1000, n, d)) @ np.linalg.cholesky(0.5 * np.ones((d, d)) + 0.5 * np.eye(d)).T
+    b2 = mardia_kurtosis(w)
+    assert b2.shape == (1000, 1)
+    # the definition, on the raw window: centred days and their covariance with divisor n
+    x = w[0] - w[0].mean(0)
+    s = x.T @ x / n
+    by_hand = np.mean([(xt @ np.linalg.solve(s, xt)) ** 2 for xt in x])
+    assert b2[0, 0] == pytest.approx(by_hand, rel=1e-9)
+    # affine invariant: rescaling and shifting the assets changes nothing
+    np.testing.assert_allclose(mardia_kurtosis(w[:20] * np.arange(1, 8) + 3.0), b2[:20], rtol=1e-9)
+    # Gaussian days: E b_2 = d(d + 2)(n - 1)/(n + 1) = 59.93; sd of the mean over 1000 windows ~0.11
+    assert b2.mean() == pytest.approx(d * (d + 2) * (n - 1) / (n + 1), abs=0.5)
+
+
+def test_mardia_kurtosis_sees_heavier_tails_at_the_same_correlation():
+    from src.features import mardia_kurtosis
+
+    rng = np.random.default_rng(4)
+    g = rng.normal(size=(400, 40, 7))
+    t = g * np.sqrt(3 / rng.chisquare(3, size=(400, 40, 1)))      # multivariate t, 3 degrees of freedom
+    assert mardia_kurtosis(t).mean() > mardia_kurtosis(g).mean() + 20
+
+
 def test_asking_for_more_layers_changes_nothing():
     """The number of layers used is enough: requesting more only adds zeros."""
     from gtda.diagrams import Amplitude

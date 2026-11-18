@@ -96,3 +96,30 @@ def leading_eigenvalue_share(windows: np.ndarray) -> np.ndarray:
         c = np.corrcoef(w, rowvar=False)
         out[i, 0] = np.linalg.eigvalsh(c)[-1] / d
     return out
+
+
+def mardia_kurtosis(windows: np.ndarray) -> np.ndarray:
+    """Mardia's (1970) multivariate kurtosis of each window,
+    b_2 = mean_t (z_t^T S^-1 z_t)^2, with z_t the standardised days and S their
+    covariance (divisor n). Shape (n_windows, 1). It is affine invariant, so
+    standardising changes nothing; for n independent Gaussian days in d
+    dimensions its mean is d(d + 2)(n - 1)/(n + 1), about 59.9 for n = 40 and
+    d = 7.
+
+    The control for what the correlation spectrum leaves out when days are
+    elliptical. For independent elliptical days, a standardised day is
+    z_t ≈ r_t R^(1/2) u_t, with u_t uniform on the sphere and independent of
+    the radius r_t, up to the sampling error of the standardisation: the
+    distances between days, all that Vietoris-Rips persistence uses, then
+    depend on R only through its eigenvalues and otherwise on the law of r_t,
+    whose leading summary is b_2 (it estimates the mean of r_t^4 when the mean
+    of r_t^2 is d). A window that mixes calm and turbulent days also has a
+    larger b_2."""
+    from .persistence import standardize_windows
+
+    z = standardize_windows(windows)
+    out = np.empty((len(z), 1))
+    for i, w in enumerate(z):
+        s_inv = np.linalg.inv(np.cov(w, rowvar=False, bias=True))
+        out[i, 0] = np.mean(np.einsum("ij,jk,ik->i", w, s_inv, w) ** 2)
+    return out
