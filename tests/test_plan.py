@@ -135,8 +135,9 @@ def test_dry_run_on_synthetic_prices():
     assert loco["scorable"] == 5 and wf["scorable"] == 4      # walk-forward cannot score 2008
     gfc = wf["episodes"]["global financial crisis"]
     assert gfc["delta_auc"]["mean"] is None
-    assert not wf["alarms"]["global financial crisis"]["spectrum"]["scorable"]
-    assert set(loco["secondary"]) == {"comparison", "wins", "passes"}
+    assert not wf["alarms"]["global financial crisis"][run_plan.BASELINE]["scorable"]
+    assert set(loco["reported"]) == set(run_plan.REPORTED)
+    assert set(loco["reported"]["kurtosis"]) == {"comparison", "wins", "passes"}
     # the injected regimes are easy: every score ranks the held-out crisis well
     for t in loco["episodes"].values():
         assert t["random_forest"]["volatility"]["roc_auc"]["mean"] > 0.8

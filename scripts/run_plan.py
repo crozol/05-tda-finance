@@ -7,12 +7,15 @@ Every step follows the section "Analysis plan (fixed before any result)":
   standardised window, and the ``L¹`` and ``L²`` norms of its persistence
   landscapes, summed over all layers as in Gidea & Katz (2018, eq. 2.3), on
   giotto-tda's default grid (four topological features);
-* the primary comparison, topology plus the eigenvalue spectrum of the
-  correlation matrix against the spectrum alone (amendment 7), and as
-  secondary comparisons topology plus the leading eigenvalue share against
-  that share alone (the primary comparison before amendment 7) and realised
-  volatility, under leave-one-crisis-out and under a walk-forward scheme that
-  trains only on the past;
+* the primary comparison, topology plus realised volatility and the
+  eigenvalue spectrum of the correlation matrix against volatility and the
+  spectrum alone (point 10 of the plan), and three comparisons reported but
+  not counted (point 11): topology plus the spectrum against the spectrum
+  alone, the primary comparison with Mardia's multivariate kurtosis on both
+  sides, and topology plus the leading eigenvalue share against that share
+  alone (the primary comparison of plan v0.1.1); all under
+  leave-one-crisis-out and under a walk-forward scheme that trains only on
+  the past;
 * a random forest of 300 trees fitted with seeds 0-9; ROC-AUC and average
   precision are means over the seeds, and an episode is a win when the mean
   ΔAUC (combined minus its control) exceeds its standard deviation across seeds;
@@ -50,7 +53,7 @@ import pandas as pd
 from src.classify import SeedAverage, make_logistic, make_random_forest
 from src.data import CRISIS_PERIODS, crisis_labels, load_frozen_prices, log_returns
 from src.features import (correlation_spectrum, landscape_norms, leading_eigenvalue_share,
-                          realized_volatility, stack_features)
+                          mardia_kurtosis, realized_volatility, stack_features)
 from src.persistence import persistence_diagrams, sliding_windows, standardize_windows
 from src.validation import (calibrated_threshold, evaluate, first_alarm, leave_one_crisis_out,
                             past_only_crisis_splits, purge_gap)
@@ -63,8 +66,12 @@ SEEDS = tuple(range(10))
 NOT_COUNTED = ("china devaluation",)          # reported, not counted (2 positive windows)
 LOCO_MIN_WINS = 4                             # of the 5 counted episodes
 WF_MIN_WINS = 3                               # of the counted episodes the walk-forward can score
-COMBINED, BASELINE = "topology + spectrum", "spectrum"          # primary (amendment 7)
-SECONDARY = ("topology + eigenvalue", "eigenvalue")              # primary before amendment 7
+COMBINED, BASELINE = "topology + spectrum + volatility", "spectrum + volatility"   # primary (point 10)
+REPORTED = {                                  # reported, not counted (point 11)
+    "spectrum": ("topology + spectrum", "spectrum"),
+    "kurtosis": ("topology + spectrum + volatility + kurtosis", "spectrum + volatility + kurtosis"),
+    "eigenvalue": ("topology + eigenvalue", "eigenvalue"),       # the primary comparison of plan v0.1.1
+}
 ALARM_SCORES = (COMBINED, BASELINE, "volatility")
 
 
@@ -116,11 +123,16 @@ def build_features(prices: pd.DataFrame) -> dict:
     y, episode = crisis_labels(returns.index[end])
     topo = landscape_norms(persistence_diagrams(standardize_windows(windows)))
     spec, eig = correlation_spectrum(windows), leading_eigenvalue_share(windows)
-    vol = realized_volatility(windows)
-    sets = {COMBINED: stack_features(topo, spec),
-            BASELINE: spec,
-            SECONDARY[0]: stack_features(topo, eig),
-            SECONDARY[1]: eig,
+    vol, kurt = realized_volatility(windows), mardia_kurtosis(windows)
+    # topology first, then spectrum, volatility and kurtosis: the column order of the calibration
+    sets = {COMBINED: stack_features(topo, spec, vol),
+            BASELINE: stack_features(spec, vol),
+            REPORTED["kurtosis"][0]: stack_features(topo, spec, vol, kurt),
+            REPORTED["kurtosis"][1]: stack_features(spec, vol, kurt),
+            REPORTED["spectrum"][0]: stack_features(topo, spec),
+            REPORTED["spectrum"][1]: spec,
+            REPORTED["eigenvalue"][0]: stack_features(topo, eig),
+            REPORTED["eigenvalue"][1]: eig,
             "volatility": vol,
             "topology": topo}
     return {"returns": returns, "end": end, "y": y, "episode": episode, "sets": sets}
@@ -214,7 +226,8 @@ def run(prices: pd.DataFrame, seeds=SEEDS, make_model=make_random_forest) -> dic
         rf = scores_by_episode(data["sets"], y, splits, seeds, make_model)
         lr = scores_by_episode(data["sets"], y, splits, [0], lambda s: make_logistic())
         crit = criterion(rf[COMBINED]["roc_auc"] - rf[BASELINE]["roc_auc"], counted)
-        crit2 = criterion(rf[SECONDARY[0]]["roc_auc"] - rf[SECONDARY[1]]["roc_auc"], counted)
+        reported = {k: criterion(rf[a]["roc_auc"] - rf[b]["roc_auc"], counted)
+                    for k, (a, b) in REPORTED.items()}
         crit_lr = criterion(lr[COMBINED]["roc_auc"] - lr[BASELINE]["roc_auc"], counted)
         need = LOCO_MIN_WINS if scheme == "leave one crisis out" else WF_MIN_WINS
         table = {}
@@ -226,16 +239,17 @@ def run(prices: pd.DataFrame, seeds=SEEDS, make_model=make_random_forest) -> dic
                 "logistic": {name: {m: _num(v[m][0, k]) for m in v} for name, v in lr.items()},
                 "delta_auc": {"mean": _num(crit["mean"][k]), "sd": _num(crit["sd"][k]),
                               "win": bool(crit["win"][k])},
-                "delta_auc_secondary": {"mean": _num(crit2["mean"][k]), "sd": _num(crit2["sd"][k]),
-                                        "win": bool(crit2["win"][k])},
+                "delta_auc_reported": {r: {"mean": _num(c["mean"][k]), "sd": _num(c["sd"][k]),
+                                           "win": bool(c["win"][k])} for r, c in reported.items()},
                 "delta_auc_logistic": _num(crit_lr["mean"][k]),
             }
         res["schemes"][scheme] = {
             "episodes": table,
             "wins": crit["wins_counted"], "scorable": crit["scorable_counted"],
             "min_wins": need, "passes": crit["wins_counted"] >= need,
-            "secondary": {"comparison": f"{SECONDARY[0]} vs {SECONDARY[1]}",
-                          "wins": crit2["wins_counted"], "passes": crit2["wins_counted"] >= need},
+            "reported": {r: {"comparison": f"{REPORTED[r][0]} vs {REPORTED[r][1]}",
+                             "wins": c["wins_counted"], "passes": c["wins_counted"] >= need}
+                         for r, c in reported.items()},
             "logistic_wins": int(((crit_lr["mean"] > 0) & counted).sum()),
             "alarms": alarms(data, splits, seeds, make_model),
         }
@@ -261,8 +275,8 @@ def report(res: dict) -> None:
           f"positives {res['positives']}")
     for scheme, s in res["schemes"].items():
         print(f"\n== {scheme}: {s['wins']} wins of {s['scorable']} scorable counted episodes "
-              f"(needs {s['min_wins']}) -> {'PASS' if s['passes'] else 'FAIL'}; secondary "
-              f"({s['secondary']['comparison']}): {s['secondary']['wins']} wins")
+              f"(needs {s['min_wins']}) -> {'PASS' if s['passes'] else 'FAIL'}; reported: "
+              + "; ".join(f"{v['comparison']}: {v['wins']} wins" for v in s["reported"].values()))
         for ep, t in s["episodes"].items():
             rf = t["random_forest"]
             f = lambda name: (f"{rf[name]['roc_auc']['mean']:.3f}" if rf[name]["roc_auc"]["mean"] is not None
@@ -270,7 +284,7 @@ def report(res: dict) -> None:
             d = t["delta_auc"]
             dd = f"{d['mean']:+.3f} ± {d['sd']:.3f}" if d["mean"] is not None else "not scorable"
             print(f"  {ep:26s} n+ {t['n_positive']:3d}{'' if t['counted'] else ' (not counted)':15s}"
-                  f" AUC comb {f(COMBINED)}  spec {f(BASELINE)}  eig {f(SECONDARY[1])}  "
+                  f" AUC comb {f(COMBINED)}  base {f(BASELINE)}  eig {f(REPORTED['eigenvalue'][1])}  "
                   f"vol {f('volatility')}  ΔAUC {dd}"
                   f"{'  win' if d['win'] else ''}")
         for ep, per in s["alarms"].items():

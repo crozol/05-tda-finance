@@ -19,8 +19,8 @@ alone, each named by its control:
 * spectrum: all its eigenvalues. For independent Gaussian days with one distribution, topology
   on standardised windows has nothing to add to them (src.features.correlation_spectrum);
 * spectrum + volatility: the spectrum and realised volatility, the two baselines the hypothesis
-  names. Standardising removes the volatility level of a window, not a change of volatility
-  inside it, and the diagrams can see that change;
+  names, and the primary comparison of the plan (point 10). Standardising removes the volatility
+  level of a window, not a change of volatility inside it, and the diagrams can see that change;
 * spectrum + volatility + kurtosis: the same and Mardia's multivariate kurtosis, the leading
   summary of what the persistence of independent elliptical days depends on besides the
   spectrum (src.features.mardia_kurtosis).
@@ -44,23 +44,22 @@ from pathlib import Path
 
 import numpy as np
 
-from scripts.run_plan import (CONTEXT, GAP, LOCO_MIN_WINS, NOT_COUNTED, SEEDS, STEP, WF_MIN_WINS,
-                              WINDOW, _num, build_features, criterion, scores_by_episode,
-                              synthetic_prices, synthetic_regime)
+from scripts.run_plan import (BASELINE, COMBINED, CONTEXT, GAP, LOCO_MIN_WINS, NOT_COUNTED, REPORTED,
+                              SEEDS, STEP, WF_MIN_WINS, WINDOW, _num, build_features, criterion,
+                              scores_by_episode, synthetic_prices, synthetic_regime)
 from src.classify import make_random_forest
 from src.data import CRISIS_PERIODS, crisis_labels, log_returns
-from src.features import mardia_kurtosis, stack_features
 from src.persistence import sliding_windows
 from src.validation import leave_one_crisis_out, past_only_crisis_splits
 
 # topology plus a control against the control alone, keyed by the control
 COMPARISONS = {
-    "eigenvalue": ("topology + eigenvalue", "eigenvalue"),
-    "spectrum": ("topology + spectrum", "spectrum"),
-    "spectrum + volatility": ("topology + spectrum + volatility", "spectrum + volatility"),
-    "spectrum + volatility + kurtosis": ("topology + spectrum + volatility + kurtosis",
-                                         "spectrum + volatility + kurtosis"),
+    "eigenvalue": REPORTED["eigenvalue"],
+    "spectrum": REPORTED["spectrum"],
+    "spectrum + volatility": (COMBINED, BASELINE),
+    "spectrum + volatility + kurtosis": REPORTED["kurtosis"],
 }
+PRIMARY = "spectrum + volatility"             # the comparison the criterion counts (point 10 of the plan)
 SCENARIOS = {"null": "gaussian", "heavy-tailed": "heavy-tailed"}
 SCHEMES = ("leave one crisis out", "walk-forward")
 
@@ -73,17 +72,8 @@ def clopper_pearson(k: int, n: int, alpha: float = 0.05) -> list[float]:
 
 
 def feature_sets(data: dict) -> dict:
-    """Both sides of every comparison. The sets of run_plan are reused; the others stack
-    topology, spectrum, volatility and kurtosis in that order."""
-    s = data["sets"]
-    windows, end = sliding_windows(data["returns"].to_numpy(), WINDOW, STEP)
-    assert np.array_equal(end, data["end"])
-    topo, spec, vol, kurt = s["topology"], s["spectrum"], s["volatility"], mardia_kurtosis(windows)
-    stacked = {"topology + spectrum + volatility": stack_features(topo, spec, vol),
-               "spectrum + volatility": stack_features(spec, vol),
-               "topology + spectrum + volatility + kurtosis": stack_features(topo, spec, vol, kurt),
-               "spectrum + volatility + kurtosis": stack_features(spec, vol, kurt)}
-    return {k: s[k] if k in s else stacked[k] for pair in COMPARISONS.values() for k in pair}
+    """Both sides of every comparison, as run_plan.build_features computes them."""
+    return {k: data["sets"][k] for pair in COMPARISONS.values() for k in pair}
 
 
 def criteria(prices, seeds=SEEDS, make_model=make_random_forest) -> dict:
@@ -153,7 +143,7 @@ def main(scenario: str, seeds: list[int], out_dir: str = "results/calibration") 
 
 def summarize(out_dir: str = "results/calibration",
               out: str = "results/calibration.json") -> dict:
-    summary = {}
+    summary = {"primary": PRIMARY}
     for scenario in SCENARIOS:
         runs = [json.loads(Path(f).read_text())
                 for f in sorted(glob.glob(str(Path(out_dir) / scenario / "seed*.json")))]
