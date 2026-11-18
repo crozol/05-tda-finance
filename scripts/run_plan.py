@@ -98,19 +98,28 @@ def synthetic_prices(seed: int = 0, start: str = "2005-01-03", end: str = "2026-
     freedom (every asset of a day divided by the same sqrt(W / df), W
     chi-squared), rescaled to the same variance: the correlation is the same,
     the joint tails are heavier. The extra draws come after the Gaussian ones,
-    so both versions share them for a given seed."""
+    so both versions share them for a given seed.
+
+    crisis="tails-only" is the positive control of the calibration: volatility
+    and correlation keep their normal values throughout, and only the tails of
+    the regime's days change (the same multivariate t). The baselines can see
+    the crises only through the sampling noise of their estimates, while a few
+    extreme days stand out in a standardised window."""
     dates = pd.bdate_range(start, end)
     rng = np.random.default_rng(seed)
     in_crisis = synthetic_regime(dates)
-    sigma, rho = np.where(in_crisis, 0.02, 0.01), np.where(in_crisis, 0.7, 0.3)
+    if crisis == "tails-only":
+        sigma, rho = np.full(len(dates), 0.01), np.full(len(dates), 0.3)
+    else:
+        sigma, rho = np.where(in_crisis, 0.02, 0.01), np.where(in_crisis, 0.7, 0.3)
     common = rng.normal(size=(len(dates), 1))
     idio = rng.normal(size=(len(dates), n_assets))
     z = np.sqrt(rho)[:, None] * common + np.sqrt(1 - rho)[:, None] * idio
-    if crisis == "heavy-tailed":
+    if crisis in ("heavy-tailed", "tails-only"):
         w = rng.chisquare(df, size=len(dates))
         z = z * np.where(in_crisis, np.sqrt((df - 2) / w), 1.0)[:, None]
     elif crisis != "gaussian":
-        raise ValueError(f"crisis must be 'gaussian' or 'heavy-tailed', not {crisis!r}")
+        raise ValueError(f"crisis must be 'gaussian', 'heavy-tailed' or 'tails-only', not {crisis!r}")
     r = sigma[:, None] * z
     return pd.DataFrame(100 * np.exp(np.cumsum(r, axis=0)), index=dates,
                         columns=[f"S{i}" for i in range(n_assets)])

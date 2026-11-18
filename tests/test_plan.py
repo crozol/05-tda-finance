@@ -90,6 +90,30 @@ def test_heavy_tailed_crises_keep_the_gaussian_draws_and_fatten_only_the_crisis_
         run_plan.synthetic_prices(crisis="other")
 
 
+def test_tails_only_crises_keep_volatility_and_correlation_and_fatten_the_tails():
+    """The positive control: outside the regime the returns are those of the null; inside it
+    only the tails change. Kendall's tau depends only on the correlation for any elliptical
+    law, 2/pi * arcsin(0.3) = 0.194 here, so it is the same on calm and regime days."""
+    from scipy.stats import kendalltau
+
+    g = run_plan.log_returns(run_plan.synthetic_prices(seed=2))
+    t = run_plan.log_returns(run_plan.synthetic_prices(seed=2, crisis="tails-only"))
+    regime = run_plan.synthetic_regime(g.index)
+    np.testing.assert_allclose(t.to_numpy()[~regime], g.to_numpy()[~regime])
+
+    def mean_tau(x):
+        return np.mean([kendalltau(x[:, i], x[:, j])[0] for i in range(7) for j in range(i + 1, 7)])
+
+    def kurtosis(x):
+        z = (x - x.mean()) / x.std()
+        return float((z ** 4).mean())
+
+    x_regime, x_calm = t.to_numpy()[regime], t.to_numpy()[~regime]
+    assert mean_tau(x_regime) == pytest.approx(2 / np.pi * np.arcsin(0.3), abs=0.03)
+    assert mean_tau(x_calm) == pytest.approx(2 / np.pi * np.arcsin(0.3), abs=0.03)
+    assert kurtosis(x_regime.ravel()) > kurtosis(x_calm.ravel()) + 1
+
+
 def test_the_synthetic_regime_doubles_volatility_and_nearly_decides_the_label():
     from scripts import calibrate_plan
 

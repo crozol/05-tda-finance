@@ -7,7 +7,11 @@ periods of src/data.py:
 * null: crises change only volatility and correlation, and returns stay Gaussian, so topology
   has no shape of its own to detect;
 * heavy-tailed: the same, and crisis returns are also multivariate Student t with 3 degrees of
-  freedom at the same correlation.
+  freedom at the same correlation;
+* tails-only, the positive control: volatility and correlation never change, and crisis returns
+  are multivariate Student t with 3 degrees of freedom, so the crises are only in the tails,
+  which the volatility and the spectrum see only through the noise of their estimates. A
+  criterion with power should pass here; it is not a model of real crises.
 
 For each dataset the script applies the win rule of the plan (10 random-forest seeds, a win when
 the mean ΔAUC exceeds its standard deviation across seeds, leave-one-crisis-out and the
@@ -60,7 +64,7 @@ COMPARISONS = {
     "spectrum + volatility + kurtosis": REPORTED["kurtosis"],
 }
 PRIMARY = "spectrum + volatility"             # the comparison the criterion counts (point 10 of the plan)
-SCENARIOS = {"null": "gaussian", "heavy-tailed": "heavy-tailed"}
+SCENARIOS = {"null": "gaussian", "heavy-tailed": "heavy-tailed", "tails-only": "tails-only"}
 SCHEMES = ("leave one crisis out", "walk-forward")
 
 
