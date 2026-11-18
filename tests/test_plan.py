@@ -125,6 +125,26 @@ def test_the_synthetic_regime_doubles_volatility_and_nearly_decides_the_label():
     assert all(0.9 < a <= 1.0 for a in auc.values())
 
 
+def test_the_settings_of_gidea_and_katz_change_only_the_window_and_the_homology():
+    pytest.importorskip("gtda")
+    from src.features import landscape_norms
+    from src.persistence import persistence_diagrams, sliding_windows, standardize_windows
+
+    prices = run_plan.synthetic_prices(seed=3)
+    for setting in ("gidea-katz-50", "gidea-katz-100"):
+        window, dims = run_plan.SETTINGS[setting]
+        assert dims == (1,)
+        data = run_plan.build_features(prices, window, dims)
+        assert data["gap"] == purge_gap(window, run_plan.STEP)            # 9 and 19 windows
+        assert data["sets"]["topology"].shape[1] == 2                      # L1 and L2 of H1
+        assert data["sets"][run_plan.COMBINED].shape[1] == 2 + 7 + 1
+    # H1 alone gives the H1 columns of the plan's H0 + H1 computation (same grid per dimension)
+    w, _ = sliding_windows(run_plan.log_returns(prices).to_numpy(), 50, run_plan.STEP)
+    z = standardize_windows(w[:40])
+    both = landscape_norms(persistence_diagrams(z, (0, 1)))               # p=1 (H0, H1), p=2 (H0, H1)
+    np.testing.assert_allclose(landscape_norms(persistence_diagrams(z, (1,))), both[:, [1, 3]], rtol=1e-12)
+
+
 def test_calibration_records_every_comparison(tmp_path):
     pytest.importorskip("gtda")
     from sklearn.ensemble import RandomForestClassifier

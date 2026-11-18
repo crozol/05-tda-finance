@@ -24,7 +24,11 @@ Every step follows the section "Analysis plan (fixed before any result)":
   fold), the alarm on the window that completes a run of 3 above it, searched
   from 60 trading days before the crisis, and the lead time in trading days to
   the drawdown minimum;
-* logistic regression as a check.
+* logistic regression as a check;
+* reported, not counted: the same analysis with the settings of Gidea & Katz
+  (2018), homology in dimension 1 only and windows of 50 or 100 days (their
+  step is one day; here it stays 5), ``--setting gidea-katz-50`` or
+  ``gidea-katz-100``.
 
 By default it runs on synthetic prices with the crisis periods of
 ``src/data.py`` injected as high-volatility, high-correlation regimes, a dry
@@ -37,6 +41,7 @@ that run is the first result of the project.
 Usage:
     python -m scripts.run_plan                       # synthetic dry run
     python -m scripts.run_plan --data frozen         # the analysis plan, on market data
+    python -m scripts.run_plan --data frozen --setting gidea-katz-50
 """
 
 from __future__ import annotations
@@ -73,6 +78,11 @@ REPORTED = {                                  # reported, not counted (point 11)
     "eigenvalue": ("topology + eigenvalue", "eigenvalue"),       # the primary comparison of plan v0.1.1
 }
 ALARM_SCORES = (COMBINED, BASELINE, "volatility")
+SETTINGS = {                                  # window (trading days) and homology dimensions of the topology
+    "plan": (WINDOW, (0, 1)),
+    "gidea-katz-50": (50, (1,)),              # reported, not counted: the settings of Gidea & Katz (2018),
+    "gidea-katz-100": (100, (1,)),            # H1 and windows of 50 and 100 days (their step is 1, here 5)
+}
 
 
 def synthetic_regime(dates: pd.DatetimeIndex) -> np.ndarray:
@@ -125,12 +135,14 @@ def synthetic_prices(seed: int = 0, start: str = "2005-01-03", end: str = "2026-
                         columns=[f"S{i}" for i in range(n_assets)])
 
 
-def build_features(prices: pd.DataFrame) -> dict:
-    """Windows, labels and the feature sets compared on identical folds."""
+def build_features(prices: pd.DataFrame, window: int = WINDOW, dims: tuple[int, ...] = (0, 1)) -> dict:
+    """Windows, labels and the feature sets compared on identical folds, for a
+    window length and the homology dimensions of the topology; ``gap`` is the
+    purge between training and test windows that this window length needs."""
     returns = log_returns(prices)
-    windows, end = sliding_windows(returns.to_numpy(), WINDOW, STEP)
+    windows, end = sliding_windows(returns.to_numpy(), window, STEP)
     y, episode = crisis_labels(returns.index[end])
-    topo = landscape_norms(persistence_diagrams(standardize_windows(windows)))
+    topo = landscape_norms(persistence_diagrams(standardize_windows(windows), dims))
     spec, eig = correlation_spectrum(windows), leading_eigenvalue_share(windows)
     vol, kurt = realized_volatility(windows), mardia_kurtosis(windows)
     # topology first, then spectrum, volatility and kurtosis: the column order of the calibration
@@ -144,7 +156,8 @@ def build_features(prices: pd.DataFrame) -> dict:
             REPORTED["eigenvalue"][1]: eig,
             "volatility": vol,
             "topology": topo}
-    return {"returns": returns, "end": end, "y": y, "episode": episode, "sets": sets}
+    return {"returns": returns, "end": end, "y": y, "episode": episode, "sets": sets,
+            "window": window, "dims": tuple(dims), "gap": purge_gap(window, STEP)}
 
 
 def scores_by_episode(sets: dict, y: np.ndarray, splits: list, seeds, make_model) -> dict:
@@ -204,7 +217,8 @@ def alarms(data: dict, splits: list, seeds, make_model) -> dict:
         per = {}
         for name in ALARM_SCORES:
             X = data["sets"][name]
-            cal = calibrated_threshold(lambda: SeedAverage(make_model, seeds), X, data["y"], train, GAP)
+            cal = calibrated_threshold(lambda: SeedAverage(make_model, seeds), X, data["y"], train,
+                                       data["gap"])
             if cal is None:
                 per[name] = {"scorable": False}
                 continue
@@ -216,16 +230,19 @@ def alarms(data: dict, splits: list, seeds, make_model) -> dict:
     return out
 
 
-def run(prices: pd.DataFrame, seeds=SEEDS, make_model=make_random_forest) -> dict:
+def run(prices: pd.DataFrame, seeds=SEEDS, make_model=make_random_forest, setting: str = "plan") -> dict:
     t0 = time.time()
-    data = build_features(prices)
+    window, dims = SETTINGS[setting]
+    data = build_features(prices, window, dims)
     y, episode = data["y"], data["episode"]
     names = list(CRISIS_PERIODS)
     episodes = sorted(set(episode[episode >= 0].tolist()))
     counted = np.array([names[e] not in NOT_COUNTED for e in episodes])
-    schemes = {"leave one crisis out": list(leave_one_crisis_out(episode, GAP, CONTEXT)),
-               "walk-forward": list(past_only_crisis_splits(episode, GAP, CONTEXT))}
-    res = {"n_windows": int(len(y)),
+    schemes = {"leave one crisis out": list(leave_one_crisis_out(episode, data["gap"], CONTEXT)),
+               "walk-forward": list(past_only_crisis_splits(episode, data["gap"], CONTEXT))}
+    res = {"setting": {"name": setting, "window": window, "step": STEP, "homology_dims": list(dims),
+                       "purge_gap": data["gap"]},
+           "n_windows": int(len(y)),
            "positives": {names[e]: int((episode == e).sum()) for e in episodes},
            "counted": [names[e] for e, c in zip(episodes, counted) if c],
            "first_day": str(data["returns"].index[0].date()),
@@ -306,11 +323,14 @@ def report(res: dict) -> None:
 if __name__ == "__main__":
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--data", choices=["synthetic", "frozen"], default="synthetic")
+    p.add_argument("--setting", choices=list(SETTINGS), default="plan")
     p.add_argument("--out", default=None)
     a = p.parse_args()
     prices = load_frozen_prices() if a.data == "frozen" else synthetic_prices()
-    out = Path(a.out or ("results/plan.json" if a.data == "frozen" else "results/synthetic_dry_run.json"))
-    res = run(prices)
+    stem = "plan" if a.data == "frozen" else "synthetic_dry_run"
+    tag = "" if a.setting == "plan" else "_" + a.setting
+    out = Path(a.out or f"results/{stem}{tag}.json")
+    res = run(prices, setting=a.setting)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(res, indent=2))
     report(res)
