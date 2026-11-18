@@ -1,0 +1,98 @@
+{
+  "scenario": "null",
+  "seed": 5,
+  "schemes": {
+    "leave one crisis out": {
+      "primary": {
+        "wins": 2,
+        "scorable": 5,
+        "passes": false,
+        "delta_auc": {
+          "global financial crisis": 0.008333333333333304,
+          "euro debt crisis": -0.007916666666666627,
+          "china devaluation": -0.0125,
+          "q4 2018 selloff": 0.010119047619047616,
+          "covid crash": -0.03500000000000001,
+          "2022 drawdown": -0.003229166666666683
+        },
+        "sd": {
+          "global financial crisis": 0.005592415524915536,
+          "euro debt crisis": 0.01636886724287345,
+          "china devaluation": 0.026352313834736515,
+          "q4 2018 selloff": 0.0067576930023517424,
+          "covid crash": 0.005270462766947311,
+          "2022 drawdown": 0.011807597862560847
+        }
+      },
+      "secondary": {
+        "wins": 2,
+        "scorable": 5,
+        "passes": false,
+        "delta_auc": {
+          "global financial crisis": 0.026602564102564098,
+          "euro debt crisis": -0.05500000000000005,
+          "china devaluation": 0.014583333333333314,
+          "q4 2018 selloff": 0.02738095238095236,
+          "covid crash": -0.016250000000000132,
+          "2022 drawdown": 0.016614583333333342
+        },
+        "sd": {
+          "global financial crisis": 0.0063968877691976955,
+          "euro debt crisis": 0.00937885723118561,
+          "china devaluation": 0.017151512548928487,
+          "q4 2018 selloff": 0.01221487616795349,
+          "covid crash": 0.008436856971381978,
+          "2022 drawdown": 0.01696145904058655
+        }
+      }
+    },
+    "walk-forward": {
+      "primary": {
+        "wins": 1,
+        "scorable": 4,
+        "passes": false,
+        "delta_auc": {
+          "global financial crisis": null,
+          "euro debt crisis": 0.018333333333333268,
+          "china devaluation": -0.0020833333333333593,
+          "q4 2018 selloff": -0.03333333333333335,
+          "covid crash": -0.09583333333333335,
+          "2022 drawdown": -0.006354166666666683
+        },
+        "sd": {
+          "global financial crisis": null,
+          "euro debt crisis": 0.005624571314254634,
+          "china devaluation": 0.02071726929191151,
+          "q4 2018 selloff": 0.007397361858058444,
+          "covid crash": 0.022652092264305663,
+          "2022 drawdown": 0.014988582331516266
+        }
+      },
+      "secondary": {
+        "wins": 1,
+        "scorable": 4,
+        "passes": false,
+        "delta_auc": {
+          "global financial crisis": null,
+          "euro debt crisis": 0.04562499999999999,
+          "china devaluation": -0.05937499999999997,
+          "q4 2018 selloff": -0.006249999999999978,
+          "covid crash": -0.12375,
+          "2022 drawdown": 0.00010416666666661634
+        },
+        "sd": {
+          "global financial crisis": null,
+          "euro debt crisis": 0.0051454537646785274,
+          "china devaluation": 0.01207814384092087,
+          "q4 2018 selloff": 0.007613723751726112,
+          "covid crash": 0.01146148946432099,
+          "2022 drawdown": 0.013000678846235805
+        }
+      }
+    }
+  },
+  "success": {
+    "primary": false,
+    "secondary": false
+  }
+}
