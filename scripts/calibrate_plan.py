@@ -46,9 +46,9 @@ import numpy as np
 
 from scripts.run_plan import (CONTEXT, GAP, LOCO_MIN_WINS, NOT_COUNTED, SEEDS, STEP, WF_MIN_WINS,
                               WINDOW, _num, build_features, criterion, scores_by_episode,
-                              synthetic_prices)
+                              synthetic_prices, synthetic_regime)
 from src.classify import make_random_forest
-from src.data import CRISIS_PERIODS
+from src.data import CRISIS_PERIODS, crisis_labels, log_returns
 from src.features import mardia_kurtosis, stack_features
 from src.persistence import sliding_windows
 from src.validation import leave_one_crisis_out, past_only_crisis_splits
@@ -112,6 +112,27 @@ def criteria(prices, seeds=SEEDS, make_model=make_random_forest) -> dict:
             "success": {name: all(out[s][name]["passes"] for s in SCHEMES) for name in COMPARISONS}}
 
 
+def regime_fraction_auc() -> dict:
+    """ROC-AUC, inside the held-out block of each episode (leave one crisis out), of the fraction
+    of the window's days that lie in the synthetic crisis regime, as a score for the window's
+    label. The regime starts 30 calendar days before the labelled crisis, so near the start of a
+    crisis the label is almost a function of that fraction: a change of volatility inside the
+    window, which standardising keeps. Labels and fractions depend only on the calendar, not on
+    the seed of the generator."""
+    from sklearn.metrics import roc_auc_score
+
+    returns = log_returns(synthetic_prices(0))
+    _, end = sliding_windows(returns.to_numpy(), WINDOW, STEP)
+    y, episode = crisis_labels(returns.index[end])
+    regime = synthetic_regime(returns.index)
+    fraction = np.array([regime[k - WINDOW + 1: k + 1].mean() for k in end])
+    names, out = list(CRISIS_PERIODS), {}
+    for _, test in leave_one_crisis_out(episode, GAP, CONTEXT):
+        e = int(episode[test][episode[test] >= 0][0])
+        out[names[e]] = float(roc_auc_score(y[test], fraction[test])) if len(set(y[test])) == 2 else None
+    return out
+
+
 def main(scenario: str, seeds: list[int], out_dir: str = "results/calibration") -> None:
     d = Path(out_dir) / scenario
     d.mkdir(parents=True, exist_ok=True)
@@ -157,6 +178,9 @@ def summarize(out_dir: str = "results/calibration",
                   f"{c['passes']}/{n} = {c['rate']:.2f} [{c['ci95'][0]:.2f}, {c['ci95'][1]:.2f}]; "
                   f"LOCO {rates['leave one crisis out']['passes']}/{n}, "
                   f"WF {rates['walk-forward']['passes']}/{n}")
+    summary["regime_fraction_auc"] = regime_fraction_auc()
+    print("ROC-AUC of the fraction of regime days, by held-out episode: " + ", ".join(
+        f"{k} {v:.3f}" for k, v in summary["regime_fraction_auc"].items()))
     Path(out).parent.mkdir(parents=True, exist_ok=True)
     Path(out).write_text(json.dumps(summary, indent=2))
     print(f"[ok] {out}")

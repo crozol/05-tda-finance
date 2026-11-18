@@ -90,6 +90,17 @@ def test_heavy_tailed_crises_keep_the_gaussian_draws_and_fatten_only_the_crisis_
         run_plan.synthetic_prices(crisis="other")
 
 
+def test_the_synthetic_regime_doubles_volatility_and_nearly_decides_the_label():
+    from scripts import calibrate_plan
+
+    returns = run_plan.log_returns(run_plan.synthetic_prices(seed=1))
+    r, regime = returns.to_numpy(), run_plan.synthetic_regime(returns.index)
+    assert r[regime].std() / r[~regime].std() == pytest.approx(2.0, rel=0.05)
+    auc = calibrate_plan.regime_fraction_auc()
+    assert set(auc) == set(run_plan.CRISIS_PERIODS)
+    assert all(0.9 < a <= 1.0 for a in auc.values())
+
+
 def test_calibration_records_every_comparison(tmp_path):
     pytest.importorskip("gtda")
     from sklearn.ensemble import RandomForestClassifier

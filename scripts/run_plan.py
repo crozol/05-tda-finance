@@ -68,6 +68,15 @@ SECONDARY = ("topology + eigenvalue", "eigenvalue")              # primary befor
 ALARM_SCORES = (COMBINED, BASELINE, "volatility")
 
 
+def synthetic_regime(dates: pd.DatetimeIndex) -> np.ndarray:
+    """The days of the synthetic crisis regime: every crisis period of
+    ``src/data.py`` and the 30 calendar days before it."""
+    in_crisis = np.zeros(len(dates), dtype=bool)
+    for s, e in CRISIS_PERIODS.values():
+        in_crisis |= (dates >= pd.Timestamp(s) - pd.Timedelta(days=30)) & (dates <= pd.Timestamp(e))
+    return in_crisis
+
+
 def synthetic_prices(seed: int = 0, start: str = "2005-01-03", end: str = "2026-11-06",
                      n_assets: int = 7, crisis: str = "gaussian", df: float = 3.0) -> pd.DataFrame:
     """One-factor returns on business days, with every crisis period of
@@ -85,12 +94,8 @@ def synthetic_prices(seed: int = 0, start: str = "2005-01-03", end: str = "2026-
     so both versions share them for a given seed."""
     dates = pd.bdate_range(start, end)
     rng = np.random.default_rng(seed)
-    sigma, rho = np.full(len(dates), 0.01), np.full(len(dates), 0.3)
-    in_crisis = np.zeros(len(dates), dtype=bool)
-    for s, e in CRISIS_PERIODS.values():
-        m = (dates >= pd.Timestamp(s) - pd.Timedelta(days=30)) & (dates <= pd.Timestamp(e))
-        sigma[m], rho[m] = 0.02, 0.7
-        in_crisis |= m
+    in_crisis = synthetic_regime(dates)
+    sigma, rho = np.where(in_crisis, 0.02, 0.01), np.where(in_crisis, 0.7, 0.3)
     common = rng.normal(size=(len(dates), 1))
     idio = rng.normal(size=(len(dates), n_assets))
     z = np.sqrt(rho)[:, None] * common + np.sqrt(1 - rho)[:, None] * idio
