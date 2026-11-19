@@ -114,7 +114,15 @@ def synthetic_prices(seed: int = 0, start: str = "2005-01-03", end: str = "2026-
     and correlation keep their normal values throughout, and only the tails of
     the regime's days change (the same multivariate t). The baselines can see
     the crises only through the sampling noise of their estimates, while a few
-    extreme days stand out in a standardised window."""
+    extreme days stand out in a standardised window.
+
+    crisis="clayton" is a non-elliptical positive control: volatility doubles
+    as in the null, but the regime's days take a Clayton copula (Marshall-Olkin
+    construction) with the Kendall tau of the null's crisis correlation,
+    tau = (2 / pi) arcsin 0.7, and standard normal margins. The crashes are
+    joint (lower-tail dependence 2^(-1/theta) ~ 0.70) while the rises are not,
+    an asymmetry that no elliptical law, and so neither the spectrum nor the
+    kurtosis, describes."""
     dates = pd.bdate_range(start, end)
     rng = np.random.default_rng(seed)
     in_crisis = synthetic_regime(dates)
@@ -128,8 +136,18 @@ def synthetic_prices(seed: int = 0, start: str = "2005-01-03", end: str = "2026-
     if crisis in ("heavy-tailed", "tails-only"):
         w = rng.chisquare(df, size=len(dates))
         z = z * np.where(in_crisis, np.sqrt((df - 2) / w), 1.0)[:, None]
+    elif crisis == "clayton":
+        from scipy.stats import norm
+
+        tau = 2 / np.pi * np.arcsin(0.7)
+        theta = 2 * tau / (1 - tau)
+        v = rng.gamma(1 / theta, 1.0, size=len(dates))
+        e = rng.exponential(size=(len(dates), n_assets))
+        u = (1 + e / v[:, None]) ** (-1 / theta)
+        z = np.where(in_crisis[:, None], norm.ppf(u), z)
     elif crisis != "gaussian":
-        raise ValueError(f"crisis must be 'gaussian', 'heavy-tailed' or 'tails-only', not {crisis!r}")
+        raise ValueError("crisis must be 'gaussian', 'heavy-tailed', 'tails-only' or 'clayton', "
+                         f"not {crisis!r}")
     r = sigma[:, None] * z
     return pd.DataFrame(100 * np.exp(np.cumsum(r, axis=0)), index=dates,
                         columns=[f"S{i}" for i in range(n_assets)])
