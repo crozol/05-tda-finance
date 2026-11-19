@@ -2,13 +2,15 @@
 
 [![CI](https://img.shields.io/github/actions/workflow/status/crozol/05-tda-finance/tests.yml?label=CI&style=flat-square)](https://github.com/crozol/05-tda-finance/actions/workflows/tests.yml)
 [![Portfolio page](https://img.shields.io/badge/Portfolio-page-7C3AED?style=flat-square)](https://crozol.github.io/projects/05-tda-finance.html)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.24095680.svg)](https://doi.org/10.5281/zenodo.24095680)
 
 **Status: in progress.** The data pipeline, features and evaluation design are
-implemented and tested; no result has been computed yet, and this document
-reports none. The analysis plan, including the success criterion, was fixed
-before any result (section "Analysis plan"); a negative control in the tests
-shows that shuffled k-fold gives ROC-AUC ≈ 0.97 to an unrelated feature,
-against ≈ 0.5 with purged folds.
+implemented and tested; no result on market data has been computed yet, and
+this document reports none: its only numbers come from synthetic data. The
+analysis plan, including the success criterion, was fixed before any result
+(section "Analysis plan"); a negative control in the tests shows that shuffled
+k-fold gives ROC-AUC ≈ 0.97 to an unrelated feature, against ≈ 0.5 with purged
+folds.
 
 Using **persistent homology** on sliding windows of multi-asset returns to
 detect market regime changes (the 2008 crisis, the 2020 crash, normal periods).
@@ -28,7 +30,7 @@ Gidea & Katz (2018) found that the `L^p` norms of persistence landscapes of
 sliding windows of four US equity indices grow in the run-up to the 2000 and
 2008 crashes. The question this project tests is narrower and harder: **do
 topological features detect crisis regimes better than realised volatility
-and the leading eigenvalue of the correlation matrix, evaluated on the same
+and the eigenvalues of the correlation matrix together, evaluated on the same
 leakage-free folds?** A crisis raises volatility and makes assets move
 together, and both effects also change a persistence diagram, so an
 improvement over a model with no baselines would not show that topology adds
@@ -49,13 +51,16 @@ anything.
     test window;
   - **leave one crisis out**: hold out each crisis with its surrounding
     normal windows, train on the rest minus a purge gap on both sides.
-- **Baselines on identical folds.** Realised volatility and the share of
-  variance in the first principal component of the correlation matrix
-  (the one-component absorption ratio, Kritzman et al., 2011) are scored with
+- **Baselines on identical folds.** Realised volatility and the eigenvalues
+  of the correlation matrix, as shares of their sum (the first one is the
+  one-component absorption ratio of Kritzman et al., 2011), are scored with
   the same model and splits as the topological features, alone and combined.
 - **Scale removed from the topology.** Each window is standardised per asset
   before computing persistence, so the diagrams describe the shape of the
-  joint distribution rather than re-measuring its volatility.
+  joint distribution rather than re-measuring its volatility. Standardising
+  removes the volatility level of a window, not a change of volatility inside
+  it: a window that mixes calm and turbulent days is still a mixture of two
+  scales, and the diagrams can see it (point 10).
 - **Success criterion.** Defined in the analysis plan below, before any
   result.
 
@@ -69,9 +74,10 @@ walk-forward.
 ## Analysis plan (fixed before any result)
 
 Committed before any feature is computed on market data (`bb57e7e`,
-2026-10-17) and amended twice, still before any result, on 2026-11-10 and
-2026-11-16 (lists at the end of this section). Any change made after the first
-result will be listed there too, with its date and reason.
+2026-10-17) and amended three times, still before any result, on
+2026-11-10, 2026-11-16 and 2026-11-19 (lists at the end of this section). Any
+change made after the first result will be listed there too, with its date and
+reason.
 
 - **Data.** Daily adjusted closes of the seven tickers in `src/data.py`,
   2005-01-03 to 2026-11-06, downloaded with yfinance 1.8.0 on 2026-11-10 and
@@ -88,9 +94,10 @@ result will be listed there too, with its date and reason.
   every episode is reported with its number of positive windows. With so few
   episodes, the conclusion is qualitative; no p-value is computed across
   episodes.
-- **Primary comparison.** Topological features plus the leading eigenvalue
-  share against the leading eigenvalue share alone. Realised volatility is a
-  secondary baseline.
+- **Primary comparison.** Topological features plus realised volatility and
+  the correlation spectrum, against volatility and the spectrum alone. Reported,
+  not counted: three other controls for the topology (point 11) and the primary
+  comparison with the settings of Gidea & Katz (point 13).
 - **Splits.** Under leave-one-crisis-out, the test block of an episode is its
   positive windows plus 12 normal windows (60 trading days) on each side, the
   stretch over which the alarm is searched; the model is trained on every
@@ -106,7 +113,7 @@ result will be listed there too, with its date and reason.
   is itself a forest of 3 000 trees: one threshold and one alarm per score and
   episode.
 - **Success criterion.** For each held-out episode, ΔAUC is the ROC-AUC of
-  the combined model minus that of the eigenvalue alone, averaged over the 10
+  the combined model minus that of the baselines alone, averaged over the 10
   seeds. An episode counts as a win only if that mean exceeds the standard
   deviation of ΔAUC across the seeds. The combined model succeeds if it wins
   in at least 4 of the 5 counted episodes under leave-one-crisis-out and in
@@ -114,9 +121,12 @@ result will be listed there too, with its date and reason.
   nothing and each episode were a coin flip, 4 of 5 would still happen with
   probability 6/32 ≈ 0.19 and 3 of 4 with probability 5/16 ≈ 0.31, so the two
   together pass by chance with probability at most 0.19: the criterion is a
-  filter, not evidence on its own. Average precision is reported alongside.
+  filter, not evidence on its own. On synthetic data in which crises change
+  only volatility and correlation it passed in 3 of 20 datasets, and in
+  7 of 20 when crises change only the tails (points 10 and 12). Average
+  precision is reported alongside.
 - **"Detects earlier", defined.** For each episode and each score — the
-  random-forest probability of the combined model, of the eigenvalue alone and
+  random-forest probability of the combined model, of the baselines alone and
   of volatility alone — with the same rule for all three:
   - threshold: the last 20 % of the windows of the training fold form a
     calibration block, separated from the rest by the same 7-window purge. The
@@ -137,7 +147,11 @@ result will be listed there too, with its date and reason.
   sums on giotto-tda's default grid, 100 points per dimension from the
   smallest birth to the largest death over all windows: the grid uses no
   label, but its range includes later windows. A random forest of 300 trees
-  as the main model (logistic regression as a check). These are the defaults
+  as the main model (logistic regression as a check). Realised volatility is
+  the mean over the seven assets of the standard deviation of their daily log
+  returns in the window; the spectrum, the seven eigenvalues of the window's
+  correlation matrix in decreasing order, divided by seven; the kurtosis,
+  Mardia's (1970) multivariate kurtosis of the window. These are the defaults
   in `src/` and are not tuned on the held-out episodes.
 
 **Amendments before any result (2026-11-10).** An external review of the plan
@@ -186,6 +200,69 @@ executed; no feature or score has been computed on market data.
    layers; the features now use their definition (`c730476`). The grid of the
    Riemann sums stays at giotto-tda's default and is stated above.
 
+**Third amendment before any result (2026-11-19).** Before the plan was run on
+market data, its criterion was run on synthetic data
+(`scripts/calibrate_plan.py`, one file per dataset in `results/`): datasets
+with the crisis periods of `src/data.py`, in which a crisis, and the 30 days
+before it, doubles volatility and raises the correlation between assets from
+0.3 to 0.7, with Gaussian days, so that topology has no shape of its own to
+detect (the null); the same with heavy-tailed crisis days (multivariate
+Student t, 3 degrees of freedom, same correlation); and a positive control in
+which crises change only the tails. No market data were used. Each cell is the
+number of 20 datasets in which the whole criterion passed:
+
+| Comparison | Gaussian crises (null) | Heavy-tailed crises | Tails only (positive control) |
+|---|---|---|---|
+| topology + spectrum + volatility vs spectrum + volatility (primary) | 3/20 | 0/20 | 7/20 |
+| topology + spectrum vs spectrum | 6/20 | 1/20 | 11/20 |
+| primary, with Mardia's kurtosis on both sides | 1/20 | 1/20 | 2/20 |
+| topology + leading eigenvalue vs eigenvalue (plan v0.1.1) | 8/20 | 5/20 | 20/20 |
+| primary, Gidea & Katz settings: H1, 50-day windows | 0/20 | – | – |
+| primary, Gidea & Katz settings: H1, 100-day windows | 0/20 | – | – |
+
+10. *Primary comparison.* Topology plus the leading eigenvalue share against
+    that share alone passed in 8 of the 20 null datasets (95 % interval
+    19–64 %), above the 0.19 stated for chance. Two channels were left open.
+    Correlation: for independent Gaussian days, the distances between the
+    days of a standardised window, all that persistence uses, depend on the
+    window's correlation matrix only through its eigenvalues
+    (`src/features.py`), so the full spectrum is the complete correlation
+    control; with it the rate fell only to 6 of 20.
+    Volatility: standardising removes the volatility level of a window, not a
+    change inside it, and near the start of a crisis the label is almost a
+    function of the fraction of turbulent days in the window (ROC-AUC
+    0.96–0.99 inside the held-out blocks of the counted episodes). The
+    hypothesis names volatility as a baseline, but the primary comparison left
+    it out. With volatility and the spectrum on both sides the criterion
+    passed in 3 of the 20 null datasets (3–38 %), in line with the 0.19
+    stated for chance.
+11. *Reported comparisons.* Three other controls are reported with the primary
+    comparison and count for nothing: the spectrum alone; the primary
+    comparison with Mardia's multivariate kurtosis on both sides; and the
+    leading eigenvalue share, the primary comparison of version 0.1.1. For
+    independent elliptical days, the persistence of a standardised window
+    depends on the correlation matrix only through its spectrum and otherwise
+    on the law of the days' distances from the centre, whose leading summary
+    is the kurtosis: a gain that survives it needs structure beyond the fourth
+    moment. The hypothesis does not name the kurtosis, so it is not counted.
+12. *Positive control.* With volatility and correlation unchanged and the
+    crises only in the tails, a criterion with power should pass. Topology
+    plus the leading eigenvalue share passed in 20 of 20 datasets, so the
+    topological features see the tails. Realised volatility takes much of
+    that signal, since a heavy-tailed window has an unusual standard
+    deviation, and the kurtosis nearly all of it: the primary comparison
+    passed in 7 of 20 (15–59 %), against 3 on the null, and with the
+    kurtosis on both sides in 2. Its power is real but modest. When
+    heavy-tailed crises also change volatility and correlation, the baselines
+    alone separate them and it passed in 0 of 20.
+13. *Settings of Gidea & Katz, reported.* The analysis is also run as Gidea &
+    Katz (2018) set it up: homology in dimension 1 only, windows of 50 and 100
+    days (`--setting gidea-katz-50` and `gidea-katz-100`). The step stays at
+    5 days, and the purge grows with the window (9 and 19 windows). On the
+    null data the primary comparison passed in none of the 20 datasets with
+    either window, and topology plus the leading eigenvalue share in 0 and 2.
+    These runs count for nothing.
+
 ## Stack
 
 - Python 3.11+
@@ -210,7 +287,9 @@ executed; no feature or score has been computed on market data.
 │   ├── validation.py     # purged walk-forward, leave-one-crisis-out, fold scoring, alarm rule
 │   └── classify.py       # models, seed average and feature-set comparison on shared folds
 ├── scripts/
-│   └── run_plan.py       # the analysis plan end to end: synthetic dry run by default, --data frozen
+│   ├── run_plan.py       # the analysis plan end to end: synthetic dry run by default, --data frozen
+│   └── calibrate_plan.py # how often the criterion passes on synthetic data
+├── results/              # calibration summaries and one file per synthetic dataset
 └── tests/
     ├── test_validation.py
     ├── test_features.py
@@ -221,7 +300,8 @@ executed; no feature or score has been computed on market data.
 
 - [x] Crisis labels fixed in advance; windows labelled by their last day.
 - [x] Leakage-free validation: purged walk-forward and leave-one-crisis-out, with tests.
-- [x] Baselines: realised volatility and leading eigenvalue of the correlation matrix.
+- [x] Baselines: realised volatility and the eigenvalue spectrum of the correlation matrix.
+- [x] Success criterion run on synthetic data before any market data: null, heavy tails, positive control.
 - [x] Daily prices of sector ETFs and indices, frozen with their SHA-256 (analysis plan); log returns.
 - [ ] Persistent homology (dimensions 0 and 1) on standardised windows.
 - [ ] Landscape norms and landscapes as features.
@@ -236,6 +316,8 @@ executed; no feature or score has been computed on market data.
   persistence landscapes.* Journal of Machine Learning Research 16, 77–102.
 - López de Prado, M. (2018). *Advances in Financial Machine Learning*, ch. 7
   (cross-validation in finance: purging and embargo). Wiley.
+- Mardia, K. V. (1970). *Measures of multivariate skewness and kurtosis with
+  applications.* Biometrika 57(3), 519–530.
 - Kritzman, M., Li, Y., Page, S. & Rigobon, R. (2011). *Principal components
   as a measure of systemic risk.* Journal of Portfolio Management 37(4), 112–126.
 - Tauzin, G. et al. (2021). *giotto-tda: A topological data analysis toolkit
