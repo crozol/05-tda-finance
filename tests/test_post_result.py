@@ -99,3 +99,17 @@ def test_reading_of_the_rule_power_above_size_and_holm():
     assert r["family"] == ["leave one crisis out dLL", "walk-forward dLL", "walk-forward dAUC|vol"]
     assert r["market_holm"] == pytest.approx({"leave one crisis out dLL": 0.06,
                                               "walk-forward dAUC|vol": 0.08, "walk-forward dLL": 0.30})
+
+
+def test_power_of_the_reading_and_exact_intervals():
+    from scripts.post_result import exact_interval, reading_power
+
+    assert exact_interval(5, 20) == pytest.approx((0.0866, 0.4910), abs=1e-4)
+    assert exact_interval(0, 20) == pytest.approx((0.0, 0.1684), abs=1e-4)
+    run = lambda a, b: {"schemes": {"walk-forward": {"primary": {"S": {"dLL": a, "dBrier": b}}}}}
+    nulls = [run(i / 100, i / 100) for i in range(41)]
+    runs = {"heavy-tailed": [run(1.0, 1.0), run(1.0, None), run(0.395, None)], "tails-only": []}
+    res = reading_power(nulls, runs, ["walk-forward dLL", "walk-forward dBrier"])
+    # null: only the largest dataset, p = 1/41 for both, Holm 2/41 <= 0.05; heavy-tailed: p = 1/42 is
+    # enough with Holm (2/42) even if the other statistic is missing (p = 1); 2/42 is not (4/42)
+    assert res == {"null": {"k": 1, "n": 41}, "heavy-tailed": {"k": 2, "n": 3}}

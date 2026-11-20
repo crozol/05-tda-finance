@@ -48,10 +48,19 @@ p-value is reported and counts for nothing. These are dLL (5 of 20) and dBrier (
 leave-one-crisis-out, and dLL (7 of 20) and dAUC|vol (4 of 20) under the walk-forward.
 (summarize() applies this reading to the power it computes and writes it under "reading".)
 
+Added on 2026-11-20, after the market data, on synthetic data only: the power of the reading as a
+whole, the share of the synthetic datasets of each scenario in which Holm's correction across the
+family finds an adjusted p-value of at most 0.05 (on the null, each dataset is tested against the
+others; a statistic that cannot be computed gives p = 1), written under "reading" as
+"power (computed after the market data)"; and --tables, the summary as markdown tables with exact
+(Clopper-Pearson) 95 % intervals for the power. Neither changes a statistic, a p-value or the
+reading.
+
 Usage:
     python -m scripts.post_result --setting plan --scenario null --seeds 0 1 2
     python -m scripts.post_result --setting plan --market
     python -m scripts.post_result --summarize                    # -> results/post_result.json
+    python -m scripts.post_result --tables                       # markdown tables of the summary
 """
 
 from __future__ import annotations
@@ -63,7 +72,7 @@ import time
 from pathlib import Path
 
 import numpy as np
-from scipy.stats import binom
+from scipy.stats import beta, binom
 
 from scripts.run_plan import (BASELINE, COMBINED, CONTEXT, NOT_COUNTED, REPORTED, SEEDS, SETTINGS,
                               build_features, synthetic_prices)
@@ -211,8 +220,66 @@ def reading(summary: dict) -> dict:
     return res
 
 
+def reading_power(nulls: list[dict], runs: dict[str, list[dict]], family: list[str],
+                  pair: str = READING["pair"]) -> dict:
+    """Added 2026-11-20, after the market data (module docstring): in how many synthetic datasets of
+    each scenario the reading as a whole, Holm across the family, gives an adjusted p <= ALPHA."""
+    def pvalues(r: dict, others: list[dict]) -> dict[str, float]:
+        out = {}
+        for f in family:
+            scheme, st = f.rsplit(" ", 1)
+            null = [v for o in others if (v := o["schemes"][scheme][pair]["S"][st]) is not None]
+            s = r["schemes"][scheme][pair]["S"][st]
+            out[f] = 1.0 if s is None else monte_carlo_p(s, null)
+        return out
+
+    res = {}
+    for sc, rs in [("null", nulls)] + [(sc, runs.get(sc, [])) for sc in ("heavy-tailed", "tails-only", "clayton")]:
+        if not rs or not family:
+            continue
+        k = sum(min(holm(pvalues(r, nulls[:i] + nulls[i + 1:] if sc == "null" else nulls)).values()) <= ALPHA
+                for i, r in enumerate(rs))
+        res[sc] = {"k": int(k), "n": len(rs)}
+    return res
+
+
+def exact_interval(k: int, n: int, level: float = 0.95) -> tuple[float, float]:
+    """Clopper-Pearson interval for a binomial proportion k / n."""
+    a = 1 - level
+    lo = 0.0 if k == 0 else float(beta.ppf(a / 2, k, n - k + 1))
+    hi = 1.0 if k == n else float(beta.ppf(1 - a / 2, k + 1, n - k))
+    return lo, hi
+
+
+def tables(path: str = "results/post_result.json") -> str:
+    """The summary as markdown tables: size, power (k/n, exact 95 % interval), market S and p."""
+    d = json.loads(Path(path).read_text())
+    lines = []
+    for setting in SETTINGS:
+        if not (s := d.get(setting)):
+            continue
+        lines += [f"**{setting}** ({s['n_null']} null datasets)", "",
+                  "| Scheme | Comparison | Statistic | Size | Heavy-tailed | Tails only | Clayton | Market S | p |",
+                  "|---|---|---|---|---|---|---|---|---|"]
+        for scheme in SCHEMES:
+            for pair in PAIRS:
+                for st, e in s.get(scheme, {}).get(pair, {}).items():
+                    cells = []
+                    for sc in ("heavy-tailed", "tails-only", "clayton"):
+                        v = e.get(f"power {sc}")
+                        cells.append("{}/{} ({:.2f}–{:.2f})".format(v["k"], v["n"], *exact_interval(v["k"], v["n"]))
+                                     if v else "–")
+                    m = e.get("market")
+                    mk = [f"{m['S']:+.4f}".replace("-", "−"), f"{m['p']:.3f}"] if m else ["–", "–"]
+                    name = st.replace("|", "\\|")
+                    lines.append(f"| {scheme} | {pair} | {name} | {e['size_leave_one_out']:.2f} | "
+                                 + " | ".join(cells + mk) + " |")
+        lines.append("")
+    return "\n".join(lines)
+
+
 def summarize(out_dir: str = OUT, out: str = "results/post_result.json") -> dict:
-    summary = {}
+    summary, synthetic = {}, {}
     for setting in SETTINGS:
         root = Path(out_dir) / setting
         runs = {sc: [json.loads(Path(f).read_text()) for f in sorted(glob.glob(str(root / sc / "seed*.json")))]
@@ -220,6 +287,7 @@ def summarize(out_dir: str = OUT, out: str = "results/post_result.json") -> dict
         nulls = [r for r in runs["null"] if r["seed"] < N_NULL[setting]]
         if not nulls:
             continue
+        synthetic[setting] = (nulls, runs)
         market = json.loads((root / "market.json").read_text()) if (root / "market.json").exists() else None
         summary[setting] = {"n_null": len(nulls)}
         for scheme in SCHEMES:
@@ -242,6 +310,9 @@ def summarize(out_dir: str = OUT, out: str = "results/post_result.json") -> dict
                         entry["market"] = None if s is None else {"S": s, "p": monte_carlo_p(s, null)}
                     summary[setting].setdefault(scheme, {}).setdefault(pair, {})[st] = entry
     read = reading(summary)
+    if READING["setting"] in synthetic:
+        read["power (computed after the market data)"] = reading_power(*synthetic[READING["setting"]],
+                                                                       read["family"])
     Path(out).write_text(json.dumps({**summary, "reading": read}, indent=2))
     for setting, s in summary.items():
         for scheme in SCHEMES:
@@ -256,6 +327,9 @@ def summarize(out_dir: str = OUT, out: str = "results/post_result.json") -> dict
           + (", ".join(read["family"]) or "no statistic has power")
           + ("; market, Holm-adjusted p: " + ", ".join(f"{k} {v:.3f}" for k, v in read["market_holm"].items())
              if read["market_holm"] else "; market -"))
+    if pw := read.get("power (computed after the market data)"):
+        print("power of the reading (computed after the market data, synthetic data only): "
+              + ", ".join(f"{sc} {v['k']}/{v['n']}" for sc, v in pw.items()))
     print(f"[ok] {out}")
     return {**summary, "reading": read}
 
@@ -267,8 +341,11 @@ if __name__ == "__main__":
     p.add_argument("--seeds", nargs="+", type=int, default=list(range(20)))
     p.add_argument("--market", action="store_true")
     p.add_argument("--summarize", action="store_true")
+    p.add_argument("--tables", action="store_true")
     a = p.parse_args()
-    if a.summarize:
+    if a.tables:
+        print(tables())
+    elif a.summarize:
         summarize()
     elif a.market:
         run_market(a.setting)

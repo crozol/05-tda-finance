@@ -843,6 +843,24 @@
       "leave one crisis out dLL": 1.0,
       "walk-forward dAUC|vol": 1.0,
       "leave one crisis out dBrier": 1.0
+    },
+    "power (computed after the market data)": {
+      "null": {
+        "k": 4,
+        "n": 99
+      },
+      "heavy-tailed": {
+        "k": 7,
+        "n": 20
+      },
+      "tails-only": {
+        "k": 11,
+        "n": 20
+      },
+      "clayton": {
+        "k": 3,
+        "n": 20
+      }
     }
   }
 }
