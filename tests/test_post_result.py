@@ -84,3 +84,18 @@ def test_clayton_crises_keep_volatility_and_kendalls_tau_and_crash_together():
 
     assert joint(xc, lower=True) > joint(xg, lower=True) + 0.15     # joint crashes
     assert joint(xc, lower=False) < joint(xg, lower=False) - 0.15   # rises are not joint
+
+
+def test_reading_of_the_rule_power_above_size_and_holm():
+    from scripts.post_result import has_power, holm, reading
+
+    assert not has_power(3, 20) and has_power(4, 20)      # P(X >= 3) = 0.075, P(X >= 4) = 0.016
+    assert not has_power(0, 20)
+    assert holm({"a": 0.01, "b": 0.04, "c": 0.03}) == pytest.approx({"a": 0.03, "c": 0.06, "b": 0.06})
+    e = lambda k, p=None: {"power heavy-tailed": {"k": k, "n": 20}, "market": None if p is None else {"S": 0.0, "p": p}}
+    summary = {"plan": {"leave one crisis out": {"primary": {"dAUC": e(3, 0.01), "dLL": e(5, 0.02)}},
+                        "walk-forward": {"primary": {"dLL": e(7, 0.30), "dAUC|vol": e(4, 0.04)}}}}
+    r = reading(summary)
+    assert r["family"] == ["leave one crisis out dLL", "walk-forward dLL", "walk-forward dAUC|vol"]
+    assert r["market_holm"] == pytest.approx({"leave one crisis out dLL": 0.06,
+                                              "walk-forward dAUC|vol": 0.08, "walk-forward dLL": 0.30})

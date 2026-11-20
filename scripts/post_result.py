@@ -39,6 +39,15 @@ On market data the script reports S and p for every statistic, comparison, schem
 If no statistic has power in the heavy-tailed scenario, the market data cannot answer the
 question with this design, and that is the conclusion that will be reported.
 
+Reading of the rule, fixed on 2026-11-20 after the synthetic runs and before any statistic was
+computed on market data. The rule above names no threshold. A statistic has power when its power
+on heavy-tailed crises exceeds the nominal size, 0.05, by an exact one-sided binomial test at
+level 0.05 (at least 4 of 20 datasets). The market evidence is read on the primary comparison in
+the plan's setting, on the statistics with power, with Holm's correction across them; every other
+p-value is reported and counts for nothing. These are dLL (5 of 20) and dBrier (5 of 20) under
+leave-one-crisis-out, and dLL (7 of 20) and dAUC|vol (4 of 20) under the walk-forward.
+(summarize() applies this reading to the power it computes and writes it under "reading".)
+
 Usage:
     python -m scripts.post_result --setting plan --scenario null --seeds 0 1 2
     python -m scripts.post_result --setting plan --market
@@ -54,6 +63,7 @@ import time
 from pathlib import Path
 
 import numpy as np
+from scipy.stats import binom
 
 from scripts.run_plan import (BASELINE, COMBINED, CONTEXT, NOT_COUNTED, REPORTED, SEEDS, SETTINGS,
                               build_features, synthetic_prices)
@@ -69,6 +79,7 @@ STATS = ("dAUC", "dLL", "dBrier", "dAUC|vol")
 CLIP, CALIPER, MIN_PAIRS, ALPHA = 1e-3, 0.1, 5, 0.05
 N_NULL = {"plan": 99, "gidea-katz-50": 20, "gidea-katz-100": 20}
 OUT = "results/post_result"
+READING = {"setting": "plan", "pair": "primary", "scenario": "heavy-tailed"}   # fixed 2026-11-20
 
 
 def matched_auc(score: np.ndarray, y: np.ndarray, log_vol: np.ndarray) -> tuple[float, int]:
@@ -173,6 +184,33 @@ def run_market(setting: str, out_dir: str = OUT) -> None:
     print(f"[ok] {f}")
 
 
+def has_power(k: int, n: int, size: float = ALPHA, level: float = ALPHA) -> bool:
+    """Power above the nominal size: exact one-sided binomial test of k detections in n."""
+    return k > 0 and binom.sf(k - 1, n, size) <= level
+
+
+def holm(p: dict[str, float]) -> dict[str, float]:
+    """Holm's step-down adjustment of a family of p-values (monotone, capped at 1)."""
+    out, run = {}, 0.0
+    for i, key in enumerate(sorted(p, key=p.get)):
+        run = max(run, min(1.0, (len(p) - i) * p[key]))
+        out[key] = run
+    return out
+
+
+def reading(summary: dict) -> dict:
+    """The reading of the rule fixed on 2026-11-20 (module docstring), applied to a summary."""
+    s, pair, sc = summary.get(READING["setting"], {}), READING["pair"], READING["scenario"]
+    family = [f"{scheme} {st}" for scheme in SCHEMES for st in STATS
+              if (e := s.get(scheme, {}).get(pair, {}).get(st, {}).get(f"power {sc}"))
+              and has_power(e["k"], e["n"])]
+    res = {**READING, "family": family, "market_holm": None}
+    markets = {f: s[f.rsplit(" ", 1)[0]][pair][f.rsplit(" ", 1)[1]].get("market") for f in family}
+    if family and all(m is not None for m in markets.values()):
+        res["market_holm"] = holm({f: m["p"] for f, m in markets.items()})
+    return res
+
+
 def summarize(out_dir: str = OUT, out: str = "results/post_result.json") -> dict:
     summary = {}
     for setting in SETTINGS:
@@ -203,7 +241,8 @@ def summarize(out_dir: str = OUT, out: str = "results/post_result.json") -> dict
                         s = market["schemes"][scheme][pair]["S"][st]
                         entry["market"] = None if s is None else {"S": s, "p": monte_carlo_p(s, null)}
                     summary[setting].setdefault(scheme, {}).setdefault(pair, {})[st] = entry
-    Path(out).write_text(json.dumps(summary, indent=2))
+    read = reading(summary)
+    Path(out).write_text(json.dumps({**summary, "reading": read}, indent=2))
     for setting, s in summary.items():
         for scheme in SCHEMES:
             for pair in PAIRS:
@@ -213,8 +252,12 @@ def summarize(out_dir: str = OUT, out: str = "results/post_result.json") -> dict
                     mk = f"market S {m['S']:+.4f} p {m['p']:.3f}" if m else "market -"
                     print(f"{setting:15s} {scheme:21s} {pair:8s} {st:8s} size {e['size_leave_one_out']:.2f}; "
                           f"power {pw}; {mk}")
+    print(f"reading ({read['setting']}, {read['pair']}; power on {read['scenario']} above the size): "
+          + (", ".join(read["family"]) or "no statistic has power")
+          + ("; market, Holm-adjusted p: " + ", ".join(f"{k} {v:.3f}" for k, v in read["market_holm"].items())
+             if read["market_holm"] else "; market -"))
     print(f"[ok] {out}")
-    return summary
+    return {**summary, "reading": read}
 
 
 if __name__ == "__main__":
