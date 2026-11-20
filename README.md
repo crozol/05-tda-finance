@@ -1,16 +1,27 @@
 # TDA on financial time series — regime change detection
 
 [![CI](https://img.shields.io/github/actions/workflow/status/crozol/05-tda-finance/tests.yml?label=CI&style=flat-square)](https://github.com/crozol/05-tda-finance/actions/workflows/tests.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)](https://opensource.org/licenses/MIT)
 [![Portfolio page](https://img.shields.io/badge/Portfolio-page-7C3AED?style=flat-square)](https://crozol.github.io/projects/05-tda-finance.html)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.24095680.svg)](https://doi.org/10.5281/zenodo.24095680)
 
-**Status: in progress.** The analysis plan, including its success
-criterion, was fixed before any result (version 0.1.2,
+**TL;DR** — Do topological features of sliding windows of daily returns
+detect crisis regimes better than realised volatility and the eigenvalues of
+the correlation matrix together, on leakage-free folds? The analysis plan,
+with its success criterion, was fixed before any result (version 0.1.2,
 [doi:10.5281/zenodo.24356109](https://doi.org/10.5281/zenodo.24356109)) and
-was run on market data on 2026-11-19; its result, with the analyses added
-after it, is being written up. A negative control in the tests shows that
-shuffled k-fold gives ROC-AUC ≈ 0.97 to an unrelated feature, against ≈ 0.5
-with purged folds.
+run once on market data on 2026-11-19. **The criterion is not met:** the
+combined model wins in 2 of the 5 counted crises under leave-one-crisis-out
+(4 needed) and in 3 of the 4 that the walk-forward can score (3 needed).
+Analyses added after the result, declared in the code before they were
+computed, test four statistics against 99 synthetic null datasets: those
+with power on realistic synthetic crises give no evidence on market data
+(Holm-adjusted p ≥ 0.96), but that power is 4 to 7 datasets in 20, so the
+absence of evidence says little; every p-value at or below 0.05 belongs to a
+statistic or comparison that the reading, fixed before the market data, does
+not count. A negative control in the tests shows that shuffled k-fold gives
+ROC-AUC ≈ 0.97 to an unrelated feature, against ≈ 0.5 with purged folds.
+Stack: giotto-tda · scikit-learn · pandas · NumPy · yfinance.
 
 Using **persistent homology** on sliding windows of multi-asset returns to
 detect market regime changes (the 2008 crisis, the 2020 crash, normal periods).
@@ -263,13 +274,214 @@ number of 20 datasets in which the whole criterion passed:
     either window, and topology plus the leading eigenvalue share in 0 and 2.
     These runs count for nothing.
 
-## Window features on market data
+**After the first result.** Nothing in this plan was changed after it was
+run on market data (2026-11-19). Two additions, listed as promised above:
+
+14. *Analyses added after the result* (`a69d18e`, 2026-11-19), declared
+    before they were computed, and the reading of their rule (`7bb229f`,
+    2026-11-20), fixed before any of them was computed on market data. They
+    do not change the criterion or its verdict (section "Analyses added after
+    the result").
+15. *Correction to point 12* (2026-11-20). "Its power is real but modest"
+    overstates it: 7 passes in 20 on crises only in the tails against 3 in
+    20 on the null is no significant difference (Fisher's exact test,
+    two-sided p = 0.27). The criterion had little power on its own positive
+    control and almost none on heavy-tailed crises (0 of 20).
+
+## First result (2026-11-19)
+
+Version 0.1.2 of the plan was run once on the frozen prices
+(`python -m scripts.run_plan --data frozen`, commit `caf7aaa`;
+`results/plan.json`). **The success criterion is not met:** the primary
+comparison wins in 2 of the 5 counted episodes under leave-one-crisis-out
+(4 needed) and in 3 of the 4 that the walk-forward can score (3 needed);
+success needs both.
+
+| Episode (positive windows) | ΔAUC, leave one crisis out | ΔAUC, walk-forward |
+|---|---|---|
+| 2008–09 (24) | +0.041 ± 0.055 | not scorable |
+| 2011 (9) | **+0.078 ± 0.009** | +0.012 ± 0.013 |
+| 2015 (2, not counted) | +0.017 ± 0.047 | −0.002 ± 0.090 |
+| Q4 2018 (13) | −0.045 ± 0.022 | **+0.058 ± 0.042** |
+| 2020 (5) | +0.029 ± 0.035 | **+0.042 ± 0.025** |
+| 2022 (39) | **+0.043 ± 0.017** | **+0.042 ± 0.021** |
+| Wins | 2 of 5 (4 needed) | 3 of 4 (3 needed) |
+
+ΔAUC: mean ± standard deviation over the 10 random-forest seeds; bold, a win
+(mean above the spread).
+
+- Inside the held-out blocks, each crisis with the 60 trading days on either
+  side, the classes barely separate: under leave-one-crisis-out the ROC-AUC
+  of the combined model is 0.49–0.61 in every counted episode but 2011
+  (0.99), below that of volatility alone (0.55–0.71) in those four.
+- Reported, not counted (wins under leave-one-crisis-out / walk-forward):
+  topology + spectrum against the spectrum, 2 / 3; the primary comparison
+  with Mardia's kurtosis on both sides, 4 / 2; the comparison of version
+  0.1.1, 3 / 3; logistic regression in place of the forest, 0 / 1; the
+  settings of Gidea & Katz, 2 / 0 with 50-day windows and 1 / 2 with 100-day
+  windows. None meets the criterion.
+- Alarms (the rule of the plan; trading days before the drawdown minimum):
+  under leave-one-crisis-out, the combined model and the baselines alone
+  warn only in 2022 (80), volatility alone in 2008–09 (106), 2011 (30) and
+  2022 (75); under the walk-forward, the combined model in 2011 (25) and 2020
+  (5), the baselines alone in 2011 (25), volatility alone in 2011 (20).
 
 ![Window features on market data, 2005–2026](figures/features_timeseries.png)
 
 Realised volatility, the leading eigenvalue share and the landscape `L¹`
 norms in dimensions 0 and 1 of every window, 2005–2026, crisis periods
-shaded (`scripts/plot_features.py`). Descriptive: it tests nothing.
+shaded (`scripts/plot_features.py`; drawn after the result, descriptive).
+The dimension-0 norm falls in most crises, mirroring the rise of the leading
+eigenvalue share, as the dependence of persistence on the correlation
+spectrum predicts.
+
+## Analyses added after the result
+
+The criterion has almost no power where it matters: on heavy-tailed
+synthetic crises, which change volatility, correlation and the tails at
+once, it passed in 0 of 20 datasets (point 12). An external review of
+version 0.1.2, written before it saw the result, traced this to the ceiling
+of the ROC-AUC and proposed tests that measure what the market data can and
+cannot say. They were written in `scripts/post_result.py` and pushed
+(`a69d18e`, 2026-11-19) before any of them was computed, on synthetic or
+market data. They do not change the verdict above.
+
+- **Statistics,** for the primary comparison and the same with Mardia's
+  kurtosis on both sides, under both schemes, averaged over the counted
+  episodes: ΔAUC (dAUC); the decrease in log-loss (dLL) and in Brier score
+  (dBrier), proper scoring rules that still move near perfect separation;
+  and ΔAUC on the pairs of a crisis and a normal window whose realised
+  volatilities differ by at most 0.1 in log (dAUC|vol), where volatility
+  cannot separate the classes.
+- **Test.** Monte Carlo (Barnard, 1963): p = (1 + #{S_null ≥ S}) / (N + 1),
+  against N = 99 synthetic null datasets (20 in each setting of Gidea &
+  Katz). Leaving each null dataset out in turn, the size is 0.04 (0.05 with
+  20).
+- **Power,** the share of 20 synthetic datasets with p ≤ 0.05: on
+  heavy-tailed crises (the realistic alternative), on crises only in the
+  tails, and, in the plan's setting, on crises with lower-tail dependence
+  through a Clayton copula, which neither the spectrum nor the kurtosis
+  describes.
+- **Reading** (`7bb229f`, 2026-11-20), fixed after the synthetic runs and
+  before any statistic was computed on market data, since the rule written
+  with the analyses named no threshold: a statistic has power when its power
+  on heavy-tailed crises exceeds 0.05 by an exact one-sided binomial test at
+  level 0.05 (at least 4 of 20). The market data are read on the primary
+  comparison in the plan's setting, on the statistics with power, with
+  Holm's (1979) correction across them; every other p-value is reported and
+  counts for nothing.
+
+Primary comparison, plan's setting. Power: datasets with p ≤ 0.05, with an
+exact 95 % interval on heavy-tailed crises. In bold, the four statistics with
+power, the only ones the reading counts.
+
+| Scheme | Statistic | Heavy-tailed | Tails only | Clayton | Market S | p | Holm |
+|---|---|---|---|---|---|---|---|
+| leave one crisis out | dAUC | 3/20 (0.03–0.38) | 10/20 | 2/20 | +0.029 | 0.02 | – |
+| | **dLL** | **5/20 (0.09–0.49)** | 12/20 | 4/20 | +0.024 | 0.35 | **1.00** |
+| | **dBrier** | **5/20 (0.09–0.49)** | 13/20 | 3/20 | −0.003 | 0.96 | **1.00** |
+| | dAUC\|vol | 3/20 (0.03–0.38) | 2/20 | 1/20 | −0.051 | 0.81 | – |
+| walk-forward | dAUC | 1/20 (0.00–0.25) | 11/20 | 3/20 | +0.038 | 0.01 | – |
+| | **dLL** | **7/20 (0.15–0.59)** | 9/20 | 3/20 | +0.041 | 0.24 | **0.96** |
+| | dBrier | 2/20 (0.01–0.32) | 12/20 | 4/20 | +0.003 | 0.62 | – |
+| | **dAUC\|vol** | **4/20 (0.06–0.44)** | 3/20 | 2/20 | +0.008 | 0.48 | **1.00** |
+
+**Conclusion.** On the statistics that count, the market data give no
+evidence that topology adds to realised volatility and the correlation
+spectrum (Holm-adjusted p ≥ 0.96). Their power on realistic synthetic crises
+is 4 to 7 in 20, so the absence of evidence says little. Applied to each
+synthetic dataset, the reading as a whole finds evidence in 7 of 20
+heavy-tailed datasets (0.15–0.59), 11 of 20 with crises only in the tails,
+3 of 20 Clayton and 4 of 99 null ones (computed on 2026-11-20, after the
+market data, on synthetic data only).
+
+- Every p-value at or below 0.05 is outside the family and counts for
+  nothing: dAUC of the primary comparison (0.02 and 0.01), whose power on
+  heavy-tailed crises was 3 and 1 in 20; the comparison with the kurtosis
+  (dAUC, dLL and dBrier, 0.01–0.04, under leave-one-crisis-out; dAUC and
+  dLL, 0.02, under the walk-forward); and 4 of the 32 statistics with the
+  settings of Gidea & Katz, at 0.048 = 1/21, the smallest p-value 20 null
+  datasets can give.
+- The null is synthetic, and it differs from the market in more than
+  topology. In the synthetic data, the fraction of a window's days in the
+  crisis regime separates the label with ROC-AUC 0.96–0.99 inside the
+  held-out blocks of the counted episodes (point 10); on market data, under
+  leave-one-crisis-out, the combined model reaches 0.49–0.61 (2011 aside). A
+  small p-value says that the market statistic is unusual for those
+  datasets, not why: the dAUC of the comparison with the kurtosis under
+  leave-one-crisis-out (+0.069) lies above every synthetic dataset of every
+  scenario in the plan's setting.
+
+<details>
+<summary>All tables: both comparisons, both schemes, the three settings (<code>python -m scripts.post_result --tables</code>)</summary>
+
+**plan** (99 null datasets)
+
+| Scheme | Comparison | Statistic | Size | Heavy-tailed | Tails only | Clayton | Market S | p |
+|---|---|---|---|---|---|---|---|---|
+| leave one crisis out | primary | dAUC | 0.04 | 3/20 (0.03–0.38) | 10/20 (0.27–0.73) | 2/20 (0.01–0.32) | +0.0292 | 0.020 |
+| leave one crisis out | primary | dLL | 0.04 | 5/20 (0.09–0.49) | 12/20 (0.36–0.81) | 4/20 (0.06–0.44) | +0.0242 | 0.350 |
+| leave one crisis out | primary | dBrier | 0.04 | 5/20 (0.09–0.49) | 13/20 (0.41–0.85) | 3/20 (0.03–0.38) | −0.0027 | 0.960 |
+| leave one crisis out | primary | dAUC\|vol | 0.04 | 3/20 (0.03–0.38) | 2/20 (0.01–0.32) | 1/20 (0.00–0.25) | −0.0506 | 0.810 |
+| leave one crisis out | kurtosis | dAUC | 0.04 | 5/20 (0.09–0.49) | 5/20 (0.09–0.49) | 0/20 (0.00–0.17) | +0.0690 | 0.010 |
+| leave one crisis out | kurtosis | dLL | 0.04 | 7/20 (0.15–0.59) | 2/20 (0.01–0.32) | 5/20 (0.09–0.49) | +0.0878 | 0.010 |
+| leave one crisis out | kurtosis | dBrier | 0.04 | 9/20 (0.23–0.68) | 3/20 (0.03–0.38) | 3/20 (0.03–0.38) | +0.0123 | 0.040 |
+| leave one crisis out | kurtosis | dAUC\|vol | 0.04 | 4/20 (0.06–0.44) | 0/20 (0.00–0.17) | 2/20 (0.01–0.32) | −0.0147 | 0.570 |
+| walk-forward | primary | dAUC | 0.04 | 1/20 (0.00–0.25) | 11/20 (0.32–0.77) | 3/20 (0.03–0.38) | +0.0384 | 0.010 |
+| walk-forward | primary | dLL | 0.04 | 7/20 (0.15–0.59) | 9/20 (0.23–0.68) | 3/20 (0.03–0.38) | +0.0411 | 0.240 |
+| walk-forward | primary | dBrier | 0.04 | 2/20 (0.01–0.32) | 12/20 (0.36–0.81) | 4/20 (0.06–0.44) | +0.0029 | 0.620 |
+| walk-forward | primary | dAUC\|vol | 0.04 | 4/20 (0.06–0.44) | 3/20 (0.03–0.38) | 2/20 (0.01–0.32) | +0.0076 | 0.480 |
+| walk-forward | kurtosis | dAUC | 0.04 | 1/20 (0.00–0.25) | 5/20 (0.09–0.49) | 1/20 (0.00–0.25) | +0.0288 | 0.020 |
+| walk-forward | kurtosis | dLL | 0.04 | 12/20 (0.36–0.81) | 2/20 (0.01–0.32) | 6/20 (0.12–0.54) | +0.0642 | 0.020 |
+| walk-forward | kurtosis | dBrier | 0.04 | 4/20 (0.06–0.44) | 1/20 (0.00–0.25) | 4/20 (0.06–0.44) | +0.0088 | 0.090 |
+| walk-forward | kurtosis | dAUC\|vol | 0.04 | 3/20 (0.03–0.38) | 0/20 (0.00–0.17) | 1/20 (0.00–0.25) | −0.0096 | 0.530 |
+
+**gidea-katz-50** (20 null datasets)
+
+| Scheme | Comparison | Statistic | Size | Heavy-tailed | Tails only | Clayton | Market S | p |
+|---|---|---|---|---|---|---|---|---|
+| leave one crisis out | primary | dAUC | 0.05 | 1/20 (0.00–0.25) | 10/20 (0.27–0.73) | – | +0.0254 | 0.048 |
+| leave one crisis out | primary | dLL | 0.05 | 10/20 (0.27–0.73) | 13/20 (0.41–0.85) | – | −0.0172 | 0.952 |
+| leave one crisis out | primary | dBrier | 0.05 | 4/20 (0.06–0.44) | 11/20 (0.32–0.77) | – | −0.0008 | 0.857 |
+| leave one crisis out | primary | dAUC\|vol | 0.05 | 3/20 (0.03–0.38) | 4/20 (0.06–0.44) | – | +0.0493 | 0.143 |
+| leave one crisis out | kurtosis | dAUC | 0.05 | 6/20 (0.12–0.54) | 6/20 (0.12–0.54) | – | +0.0067 | 0.095 |
+| leave one crisis out | kurtosis | dLL | 0.05 | 10/20 (0.27–0.73) | 5/20 (0.09–0.49) | – | +0.0157 | 0.048 |
+| leave one crisis out | kurtosis | dBrier | 0.05 | 8/20 (0.19–0.64) | 5/20 (0.09–0.49) | – | +0.0044 | 0.048 |
+| leave one crisis out | kurtosis | dAUC\|vol | 0.05 | 4/20 (0.06–0.44) | 1/20 (0.00–0.25) | – | +0.0393 | 0.095 |
+| walk-forward | primary | dAUC | 0.05 | 1/20 (0.00–0.25) | 9/20 (0.23–0.68) | – | −0.0079 | 0.810 |
+| walk-forward | primary | dLL | 0.05 | 8/20 (0.19–0.64) | 11/20 (0.32–0.77) | – | −0.0014 | 0.667 |
+| walk-forward | primary | dBrier | 0.05 | 7/20 (0.15–0.59) | 15/20 (0.51–0.91) | – | +0.0001 | 0.667 |
+| walk-forward | primary | dAUC\|vol | 0.05 | 0/20 (0.00–0.17) | 1/20 (0.00–0.25) | – | −0.0172 | 0.714 |
+| walk-forward | kurtosis | dAUC | 0.05 | 1/20 (0.00–0.25) | 4/20 (0.06–0.44) | – | −0.0016 | 0.667 |
+| walk-forward | kurtosis | dLL | 0.05 | 6/20 (0.12–0.54) | 3/20 (0.03–0.38) | – | +0.0060 | 0.333 |
+| walk-forward | kurtosis | dBrier | 0.05 | 6/20 (0.12–0.54) | 5/20 (0.09–0.49) | – | +0.0006 | 0.238 |
+| walk-forward | kurtosis | dAUC\|vol | 0.05 | 1/20 (0.00–0.25) | 1/20 (0.00–0.25) | – | −0.0083 | 0.667 |
+
+**gidea-katz-100** (20 null datasets)
+
+| Scheme | Comparison | Statistic | Size | Heavy-tailed | Tails only | Clayton | Market S | p |
+|---|---|---|---|---|---|---|---|---|
+| leave one crisis out | primary | dAUC | 0.05 | 0/20 (0.00–0.17) | 3/20 (0.03–0.38) | – | −0.0370 | 0.762 |
+| leave one crisis out | primary | dLL | 0.05 | 1/20 (0.00–0.25) | 3/20 (0.03–0.38) | – | −0.0577 | 0.952 |
+| leave one crisis out | primary | dBrier | 0.05 | 0/20 (0.00–0.17) | 1/20 (0.00–0.25) | – | +0.0014 | 0.476 |
+| leave one crisis out | primary | dAUC\|vol | 0.05 | 0/20 (0.00–0.17) | 0/20 (0.00–0.17) | – | −0.1275 | 1.000 |
+| leave one crisis out | kurtosis | dAUC | 0.05 | 3/20 (0.03–0.38) | 1/20 (0.00–0.25) | – | −0.0611 | 0.952 |
+| leave one crisis out | kurtosis | dLL | 0.05 | 9/20 (0.23–0.68) | 1/20 (0.00–0.25) | – | −0.0265 | 0.762 |
+| leave one crisis out | kurtosis | dBrier | 0.05 | 6/20 (0.12–0.54) | 3/20 (0.03–0.38) | – | +0.0001 | 0.619 |
+| leave one crisis out | kurtosis | dAUC\|vol | 0.05 | 1/20 (0.00–0.25) | 1/20 (0.00–0.25) | – | −0.0005 | 0.333 |
+| walk-forward | primary | dAUC | 0.05 | 0/20 (0.00–0.17) | 5/20 (0.09–0.49) | – | +0.0727 | 0.048 |
+| walk-forward | primary | dLL | 0.05 | 0/20 (0.00–0.17) | 10/20 (0.27–0.73) | – | +0.0306 | 0.286 |
+| walk-forward | primary | dBrier | 0.05 | 0/20 (0.00–0.17) | 0/20 (0.00–0.17) | – | +0.0097 | 0.381 |
+| walk-forward | primary | dAUC\|vol | 0.05 | 0/20 (0.00–0.17) | 2/20 (0.01–0.32) | – | −0.0539 | 0.667 |
+| walk-forward | kurtosis | dAUC | 0.05 | 0/20 (0.00–0.17) | 0/20 (0.00–0.17) | – | +0.0459 | 0.095 |
+| walk-forward | kurtosis | dLL | 0.05 | 3/20 (0.03–0.38) | 1/20 (0.00–0.25) | – | +0.0252 | 0.429 |
+| walk-forward | kurtosis | dBrier | 0.05 | 0/20 (0.00–0.17) | 1/20 (0.00–0.25) | – | +0.0072 | 0.429 |
+| walk-forward | kurtosis | dAUC\|vol | 0.05 | 0/20 (0.00–0.17) | 0/20 (0.00–0.17) | – | +0.0195 | 0.286 |
+
+</details>
+
+Summary: `results/post_result.json`; one file per dataset in
+`results/post_result/`.
 
 ## Stack
 
@@ -300,7 +512,7 @@ shaded (`scripts/plot_features.py`). Descriptive: it tests nothing.
 │   ├── post_result.py    # analyses added after the first run on market data
 │   └── plot_features.py  # the window features over time, crisis periods shaded
 ├── figures/              # features_timeseries.png
-├── results/              # the run on market data (plan*.json), calibration summaries and one file per synthetic dataset
+├── results/              # the run on market data (plan*.json), the analyses added after it (post_result*), calibration summaries, one file per synthetic dataset
 └── tests/
     ├── test_validation.py
     ├── test_features.py
@@ -319,6 +531,7 @@ shaded (`scripts/plot_features.py`). Descriptive: it tests nothing.
 - [x] Landscape norms as features.
 - [x] Compare feature sets on both split schemes.
 - [x] Time series of the features annotated with the crisis periods.
+- [x] Plan run once on market data; analyses added after the result, declared before they were computed.
 
 ## References
 
@@ -335,3 +548,8 @@ shaded (`scripts/plot_features.py`). Descriptive: it tests nothing.
 - Tauzin, G. et al. (2021). *giotto-tda: A topological data analysis toolkit
   for machine learning and data exploration.* Journal of Machine Learning
   Research 22(39), 1–6.
+- Barnard, G. A. (1963). Discussion of *The spectral analysis of point
+  processes* by M. S. Bartlett. Journal of the Royal Statistical Society B
+  25(2), 294.
+- Holm, S. (1979). *A simple sequentially rejective multiple test procedure.*
+  Scandinavian Journal of Statistics 6(2), 65–70.
