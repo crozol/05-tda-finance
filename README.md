@@ -4,13 +4,13 @@
 [![Portfolio page](https://img.shields.io/badge/Portfolio-page-7C3AED?style=flat-square)](https://crozol.github.io/projects/05-tda-finance.html)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.24095680.svg)](https://doi.org/10.5281/zenodo.24095680)
 
-**Status: in progress.** The data pipeline, features and evaluation design are
-implemented and tested; no result on market data has been computed yet, and
-this document reports none: its only numbers come from synthetic data. The
-analysis plan, including the success criterion, was fixed before any result
-(section "Analysis plan"); a negative control in the tests shows that shuffled
-k-fold gives ROC-AUC ≈ 0.97 to an unrelated feature, against ≈ 0.5 with purged
-folds.
+**Status: in progress.** The analysis plan, including its success
+criterion, was fixed before any result (version 0.1.2,
+[doi:10.5281/zenodo.24356109](https://doi.org/10.5281/zenodo.24356109)) and
+was run on market data on 2026-11-19; its result, with the analyses added
+after it, is being written up. A negative control in the tests shows that
+shuffled k-fold gives ROC-AUC ≈ 0.97 to an unrelated feature, against ≈ 0.5
+with purged folds.
 
 Using **persistent homology** on sliding windows of multi-asset returns to
 detect market regime changes (the 2008 crisis, the 2020 crash, normal periods).
@@ -263,6 +263,14 @@ number of 20 datasets in which the whole criterion passed:
     either window, and topology plus the leading eigenvalue share in 0 and 2.
     These runs count for nothing.
 
+## Window features on market data
+
+![Window features on market data, 2005–2026](figures/features_timeseries.png)
+
+Realised volatility, the leading eigenvalue share and the landscape `L¹`
+norms in dimensions 0 and 1 of every window, 2005–2026, crisis periods
+shaded (`scripts/plot_features.py`). Descriptive: it tests nothing.
+
 ## Stack
 
 - Python 3.11+
@@ -288,12 +296,16 @@ number of 20 datasets in which the whole criterion passed:
 │   └── classify.py       # models, seed average and feature-set comparison on shared folds
 ├── scripts/
 │   ├── run_plan.py       # the analysis plan end to end: synthetic dry run by default, --data frozen
-│   └── calibrate_plan.py # how often the criterion passes on synthetic data
-├── results/              # calibration summaries and one file per synthetic dataset
+│   ├── calibrate_plan.py # how often the criterion passes on synthetic data
+│   ├── post_result.py    # analyses added after the first run on market data
+│   └── plot_features.py  # the window features over time, crisis periods shaded
+├── figures/              # features_timeseries.png
+├── results/              # the run on market data (plan*.json), calibration summaries and one file per synthetic dataset
 └── tests/
     ├── test_validation.py
     ├── test_features.py
-    └── test_plan.py
+    ├── test_plan.py
+    └── test_post_result.py
 ```
 
 ## Roadmap
@@ -303,10 +315,10 @@ number of 20 datasets in which the whole criterion passed:
 - [x] Baselines: realised volatility and the eigenvalue spectrum of the correlation matrix.
 - [x] Success criterion run on synthetic data before any market data: null, heavy tails, positive control.
 - [x] Daily prices of sector ETFs and indices, frozen with their SHA-256 (analysis plan); log returns.
-- [ ] Persistent homology (dimensions 0 and 1) on standardised windows.
-- [ ] Landscape norms and landscapes as features.
-- [ ] Compare feature sets on both split schemes.
-- [ ] Time series of the features annotated with the crisis periods.
+- [x] Persistent homology (dimensions 0 and 1) on standardised windows.
+- [x] Landscape norms as features.
+- [x] Compare feature sets on both split schemes.
+- [x] Time series of the features annotated with the crisis periods.
 
 ## References
 
