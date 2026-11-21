@@ -2,7 +2,7 @@ cff-version: 1.2.0
 message: "If you use this software, please cite it as below."
 type: software
 title: "TDA on financial time series: regime change detection"
-abstract: "Persistent homology over sliding windows of multi-asset returns, tested against realised volatility and the eigenvalue spectrum of the correlation matrix on leakage-free folds (purged walk-forward, leave-one-crisis-out). Version 0.2.0 adds the single run on market data of the analysis plan fixed in version 0.1.2, whose success criterion is not met, and analyses added after it, declared before they were computed: Monte Carlo tests of four statistics against synthetic null datasets, with their power on synthetic crises. They find no evidence on market data, with low power. Version 0.2.1 adds a diagnostic, also declared before it was computed: every feature compared ignores the sign of the returns while the drawdown label does not, and on market data the baselines are near chance inside the evaluation blocks, so the result is inconclusive."
+abstract: "Persistent homology over sliding windows of multi-asset returns, tested against realised volatility and the eigenvalue spectrum of the correlation matrix on leakage-free folds (purged walk-forward, leave-one-crisis-out). Version 0.2.0 adds the single run on market data of the analysis plan fixed in version 0.1.2, whose success criterion is not met, and analyses added after it, declared before they were computed: Monte Carlo tests of four statistics against synthetic null datasets, with their power on synthetic crises. They find no evidence on market data, with low power. Version 0.2.1 adds a diagnostic, also declared before it was computed: every feature compared ignores the sign of the returns while the drawdown label does not, and on market data the baselines are near chance inside the evaluation blocks, so the result is inconclusive. Version 0.2.2 adds a test, declared with its predictions before it was computed, of why the forest on volatility fails in 2008-09: the most volatile windows of its training set, after the 2020 trough, are labelled normal, and without them it separates the 2008-09 crisis from the windows before it."
 authors:
   - given-names: "Camilo Andrés"
     family-names: "Rozo Lozano"
@@ -10,7 +10,7 @@ authors:
     email: rozol.ca555@gmail.com
 repository-code: "https://github.com/crozol/05-tda-finance"
 license: MIT
-version: "0.2.1"
+version: "0.2.2"
 date-released: 2026-11-21
 keywords:
   - topological data analysis
