@@ -12,15 +12,21 @@ with its success criterion, was fixed before any result (version 0.1.2,
 [doi:10.5281/zenodo.24356109](https://doi.org/10.5281/zenodo.24356109)) and
 run once on market data on 2026-11-19. **The criterion is not met:** the
 combined model wins in 2 of the 5 counted crises under leave-one-crisis-out
-(4 needed) and in 3 of the 4 that the walk-forward can score (3 needed).
-Analyses added after the result, declared in the code before they were
-computed, test four statistics against 99 synthetic null datasets: those
-with power on realistic synthetic crises give no evidence on market data
-(Holm-adjusted p ≥ 0.96), but that power is 4 to 7 datasets in 20, so the
-absence of evidence says little; every p-value at or below 0.05 belongs to a
-statistic or comparison that the reading, fixed before the market data, does
-not count. A negative control in the tests shows that shuffled k-fold gives
-ROC-AUC ≈ 0.97 to an unrelated feature, against ≈ 0.5 with purged folds.
+(4 needed) and in 3 of the 4 that the walk-forward can score (3 needed);
+with logistic regression, the plan's check, ΔAUC is negative in all five
+under leave-one-crisis-out. **The result is inconclusive rather than
+negative.** Every feature compared, the baselines included, ignores the sign
+of the returns, while the label, being inside a peak-to-trough drawdown,
+depends on it: inside the held-out blocks the baselines are near chance
+(ROC-AUC 0.45–0.58 in four of the five crises), and in three of those four
+the windows after the trough are as volatile as the crisis or more. Analyses
+added after the result, declared in the code before they were computed, find
+no evidence on market data (Holm-adjusted p ≥ 0.96), with power of 4 to 7 in
+20 on synthetic crises far easier to see than the market's; every p-value at
+or below 0.05 belongs to a statistic or comparison that the reading, fixed
+before the market data, does not count. A negative control in the tests
+shows that shuffled k-fold gives ROC-AUC ≈ 0.97 to an unrelated feature,
+against ≈ 0.5 with purged folds.
 Stack: giotto-tda · scikit-learn · pandas · NumPy · yfinance.
 
 Using **persistent homology** on sliding windows of multi-asset returns to
@@ -275,7 +281,7 @@ number of 20 datasets in which the whole criterion passed:
     These runs count for nothing.
 
 **After the first result.** Nothing in this plan was changed after it was
-run on market data (2026-11-19). Two additions, listed as promised above:
+run on market data (2026-11-19). Three additions, listed as promised above:
 
 14. *Analyses added after the result* (`a69d18e`, 2026-11-19), declared
     before they were computed, and the reading of their rule (`7bb229f`,
@@ -287,6 +293,11 @@ run on market data (2026-11-19). Two additions, listed as promised above:
     20 on the null is no significant difference (Fisher's exact test,
     two-sided p = 0.27). The criterion had little power on its own positive
     control and almost none on heavy-tailed crises (0 of 20).
+16. *Direction diagnostic* (`d76881d`, 2026-11-20), at the request of an
+    external review of the result, declared in the code with that review's
+    prediction before it was computed (results `4e083ed`). It does not
+    change the criterion or its verdict (section "Why the market test says
+    little").
 
 ## First result (2026-11-19)
 
@@ -320,6 +331,11 @@ success needs both.
   0.1.1, 3 / 3; logistic regression in place of the forest, 0 / 1; the
   settings of Gidea & Katz, 2 / 0 with 50-day windows and 1 / 2 with 100-day
   windows. None meets the criterion.
+- The plan's check does not support the forest's wins. With logistic
+  regression in place of the forest, ΔAUC is negative in all five counted
+  episodes under leave-one-crisis-out (−0.003 to −0.062), and of the three
+  wins under the walk-forward only 2020 keeps its sign (Q4 2018 −0.067,
+  2022 −0.104).
 - Alarms (the rule of the plan; trading days before the drawdown minimum):
   under leave-one-crisis-out, the combined model and the baselines alone
   warn only in 2022 (80), volatility alone in 2008–09 (106), 2011 (30) and
@@ -389,7 +405,9 @@ power, the only ones the reading counts.
 **Conclusion.** On the statistics that count, the market data give no
 evidence that topology adds to realised volatility and the correlation
 spectrum (Holm-adjusted p ≥ 0.96). Their power on realistic synthetic crises
-is 4 to 7 in 20, so the absence of evidence says little. Applied to each
+is 4 to 7 in 20, so the absence of evidence says little, and less on market
+data, where the baselines are near chance (section "Why the market test says
+little"). Applied to each
 synthetic dataset, the reading as a whole finds evidence in 7 of 20
 heavy-tailed datasets (0.15–0.59), 11 of 20 with crises only in the tails,
 3 of 20 Clayton and 4 of 99 null ones (computed on 2026-11-20, after the
@@ -483,6 +501,63 @@ market data, on synthetic data only).
 Summary: `results/post_result.json`; one file per dataset in
 `results/post_result/`.
 
+## Why the market test says little
+
+Added after the result at the request of an external review of it
+(2026-11-20), and declared in `scripts/direction_diagnostic.py`, with the
+review's prediction, before any of it was computed (`d76881d`; results
+`4e083ed`, `results/direction_diagnostic.json`). It does not change the
+verdict, and none of it counts.
+
+Every feature of the comparison, the baselines included, is unchanged when
+every return changes sign and when the days of a window are reordered
+(`tests/test_direction_diagnostic.py`): Vietoris-Rips persistence of a
+standardised window uses only the distances between its days, and
+volatility, the correlation spectrum and Mardia's kurtosis do not depend on
+the sign of the returns. The label does: a window is a crisis window when its
+last day falls inside a peak-to-trough drawdown. Inside a held-out block, the
+crisis with the 12 windows (60 trading days) on either side, the windows that
+end just after the trough still contain the last weeks of the drawdown, and
+the rebound that follows can be as volatile.
+
+ROC-AUC of the crisis windows of each block against its normal windows
+before and after the crisis, under leave-one-crisis-out; forests, mean over
+10 seeds:
+
+| Crisis | Volatility, before | Volatility, after | Forest on volatility, before | Forest on volatility, after | Baselines | Baselines + mean return |
+|---|---|---|---|---|---|---|
+| 2008–09 | 1.00 | 0.75 | 0.71 | 0.39 | 0.45 | 0.61 |
+| 2011 | 1.00 | 0.89 | 1.00 | 0.50 | 0.91 | 0.96 |
+| Q4 2018 | 0.78 | 0.29 | 0.80 | 0.42 | 0.58 | 0.65 |
+| 2020 | 1.00 | 0.25 | 0.91 | 0.43 | 0.58 | 0.69 |
+| 2022 | 1.00 | 0.42 | 0.70 | 0.72 | 0.49 | 0.62 |
+
+- Volatility separates every crisis from the windows before it (1.00 in
+  four, 0.78 in Q4 2018). Against the windows after it, it falls to
+  0.25–0.42 in Q4 2018, 2020 and 2022, where those windows are as volatile
+  as the crisis or more, but not in 2008–09 (0.75) or 2011 (0.89).
+- The forest on volatility alone ranks the 2008–09 and 2011 blocks worse
+  than volatility itself (0.55 against 0.88, 0.75 against 0.94): there its
+  weakness comes from what it learned on the other crises, not from the
+  block.
+- The review predicted an AUC of at least 0.8 against the windows before
+  and at most 0.5 against those after in each of 2008–09, Q4 2018 and 2020.
+  That holds for neither score: it fails in 2008–09 for both (the forest
+  0.71 before; volatility 0.75 after, as `results/plan.json` implied before
+  the run) and in Q4 2018 for volatility (0.78 before). The mechanism it
+  proposed accounts for three of the five crises.
+- The mean return of the window, which changes sign with the returns,
+  raises the AUC of the baselines in every crisis under leave-one-crisis-out
+  (by 0.05 to 0.16) and in three of the four the walk-forward can score, but
+  outside 2011 it leaves them at 0.61–0.69 under leave-one-crisis-out.
+- With the mean return on both sides, the primary comparison wins in 3 of 5
+  crises under leave-one-crisis-out and in 2 of 4 under the walk-forward.
+
+On market data, then, ΔAUC is measured around baselines near chance, and
+the power of the analyses added after the result was measured on synthetic
+crises far easier to see (section above): the market data could say little
+about whether topology adds to the baselines.
+
 ## Stack
 
 - Python 3.11+
@@ -510,14 +585,16 @@ Summary: `results/post_result.json`; one file per dataset in
 │   ├── run_plan.py       # the analysis plan end to end: synthetic dry run by default, --data frozen
 │   ├── calibrate_plan.py # how often the criterion passes on synthetic data
 │   ├── post_result.py    # analyses added after the first run on market data
+│   ├── direction_diagnostic.py  # why the market test says little: AUC against the windows before and after each crisis
 │   └── plot_features.py  # the window features over time, crisis periods shaded
 ├── figures/              # features_timeseries.png
-├── results/              # the run on market data (plan*.json), the analyses added after it (post_result*), calibration summaries, one file per synthetic dataset
+├── results/              # the run on market data (plan*.json), the analyses added after it (post_result*, direction_diagnostic.json), calibration summaries, one file per synthetic dataset
 └── tests/
     ├── test_validation.py
     ├── test_features.py
     ├── test_plan.py
-    └── test_post_result.py
+    ├── test_post_result.py
+    └── test_direction_diagnostic.py
 ```
 
 ## Roadmap
@@ -532,6 +609,8 @@ Summary: `results/post_result.json`; one file per dataset in
 - [x] Compare feature sets on both split schemes.
 - [x] Time series of the features annotated with the crisis periods.
 - [x] Plan run once on market data; analyses added after the result, declared before they were computed.
+- [x] Diagnostic of the market test, added after the result and declared with the reviewer's prediction before it was computed.
+- [ ] A new question, pre-registered as this one: early warning, windows that end before the peak of a drawdown against windows far from any (suggested by an external review).
 
 ## References
 
