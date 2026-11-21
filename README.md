@@ -19,8 +19,11 @@ negative.** Every feature compared, the baselines included, ignores the sign
 of the returns, while the label, being inside a peak-to-trough drawdown,
 depends on it: inside the held-out blocks the baselines are near chance
 (ROC-AUC 0.45–0.58 in four of the five crises), and in three of those four
-the windows after the trough are as volatile as the crisis or more. Analyses
-added after the result, declared in the code before they were computed, find
+the windows after the trough are as volatile as the crisis or more; in
+2008–09 the forest on volatility alone learned from the rebound after the
+2020 trough, labelled normal, that very high volatility is normal (a test
+declared before it was run). Analyses added after the result, declared in
+the code before they were computed, find
 no evidence on market data (Holm-adjusted p ≥ 0.96), with power of 4 to 7 in
 20 on synthetic crises far easier to see than the market's; every p-value at
 or below 0.05 belongs to a statistic or comparison that the reading, fixed
@@ -281,7 +284,7 @@ number of 20 datasets in which the whole criterion passed:
     These runs count for nothing.
 
 **After the first result.** Nothing in this plan was changed after it was
-run on market data (2026-11-19). Three additions, listed as promised above:
+run on market data (2026-11-19). Four additions, listed as promised above:
 
 14. *Analyses added after the result* (`a69d18e`, 2026-11-19), declared
     before they were computed, and the reading of their rule (`7bb229f`,
@@ -298,6 +301,11 @@ run on market data (2026-11-19). Three additions, listed as promised above:
     prediction before it was computed (results `4e083ed`). It does not
     change the criterion or its verdict (section "Why the market test says
     little").
+17. *Hypothesis for 2008–09* (`95fced8`, 2026-11-21), at the request of a
+    second external review, declared in the code with that review's two
+    predictions and their thresholds before it was computed (results
+    `3320597`). It does not change the criterion or its verdict (section
+    "Why the market test says little").
 
 ## First result (2026-11-19)
 
@@ -503,11 +511,13 @@ Summary: `results/post_result.json`; one file per dataset in
 
 ## Why the market test says little
 
-Added after the result at the request of an external review of it
-(2026-11-20), and declared in `scripts/direction_diagnostic.py`, with the
-review's prediction, before any of it was computed (`d76881d`; results
-`4e083ed`, `results/direction_diagnostic.json`). It does not change the
-verdict, and none of it counts.
+Added after the result at the request of two external reviews of it, and
+declared in the code with each review's predictions before any of it was
+computed: the diagnostic in `scripts/direction_diagnostic.py` (2026-11-20;
+`d76881d`, results `4e083ed`, `results/direction_diagnostic.json`) and the
+hypothesis for 2008–09 in `scripts/rebound_hypothesis.py` (2026-11-21;
+`95fced8`, results `3320597`, `results/rebound_hypothesis.json`). It does not
+change the verdict, and none of it counts.
 
 Every feature of the comparison, the baselines included, is unchanged when
 every return changes sign and when the days of a window are reordered
@@ -546,10 +556,29 @@ before and after the crisis, under leave-one-crisis-out; forests, mean over
   0.71 before; volatility 0.75 after, as `results/plan.json` implied before
   the run) and in Q4 2018 for volatility (0.78 before). The mechanism it
   proposed accounts for three of the five crises.
+- A second review traced 2008–09 to what the forest learned. The most
+  volatile windows of its training set, 4.8–5.2 % daily, are six of the
+  rebound after the 2020 trough, labelled normal, so very high volatility
+  reads as normal; the crisis windows of October to December 2008 reach
+  4.1–5.6 %. It predicted that the forest's crisis probability is lower at
+  4 % daily or more than at 2–3 %, and that without the 12 windows after the
+  2020 trough its AUC against the windows before the 2008–09 crisis rises
+  from 0.71 to at least 0.9. Both hold: 0.61 against 0.84, and 1.00 with
+  every seed. On the whole block the AUC rises from 0.55 to 0.73, below the
+  0.88 of volatility itself, because against the windows after the crisis it
+  reaches only 0.45. The test is on the forest on volatility alone, not on
+  the baselines.
 - The mean return of the window, which changes sign with the returns,
   raises the AUC of the baselines in every crisis under leave-one-crisis-out
   (by 0.05 to 0.16) and in three of the four the walk-forward can score, but
   outside 2011 it leaves them at 0.61–0.69 under leave-one-crisis-out.
+- As the second review pointed out, near the ends of a crisis no feature of
+  a window can do much, whether it changes sign with the returns or not. The
+  peak and the trough that bound the label are known only afterwards, and a
+  window that ends k days before the trough shares 40 − 2k of its 40 days
+  with the one that ends k days after it, which is labelled normal. Short
+  crises are mostly ends: each of the five crisis windows of 2020, a crisis
+  of 23 trading days, ends within 10 trading days of the peak or the trough.
 - With the mean return on both sides, the primary comparison wins in 3 of 5
   crises under leave-one-crisis-out and in 2 of 4 under the walk-forward.
 
@@ -586,15 +615,17 @@ about whether topology adds to the baselines.
 │   ├── calibrate_plan.py # how often the criterion passes on synthetic data
 │   ├── post_result.py    # analyses added after the first run on market data
 │   ├── direction_diagnostic.py  # why the market test says little: AUC against the windows before and after each crisis
+│   ├── rebound_hypothesis.py    # 2008–09: the forest on volatility with and without the rebound after the 2020 trough
 │   └── plot_features.py  # the window features over time, crisis periods shaded
 ├── figures/              # features_timeseries.png
-├── results/              # the run on market data (plan*.json), the analyses added after it (post_result*, direction_diagnostic.json), calibration summaries, one file per synthetic dataset
+├── results/              # the run on market data (plan*.json), the analyses added after it (post_result*, direction_diagnostic.json, rebound_hypothesis.json), calibration summaries, one file per synthetic dataset
 └── tests/
     ├── test_validation.py
     ├── test_features.py
     ├── test_plan.py
     ├── test_post_result.py
-    └── test_direction_diagnostic.py
+    ├── test_direction_diagnostic.py
+    └── test_rebound_hypothesis.py
 ```
 
 ## Roadmap
@@ -610,7 +641,8 @@ about whether topology adds to the baselines.
 - [x] Time series of the features annotated with the crisis periods.
 - [x] Plan run once on market data; analyses added after the result, declared before they were computed.
 - [x] Diagnostic of the market test, added after the result and declared with the reviewer's prediction before it was computed.
-- [ ] A new question, pre-registered as this one: early warning, windows that end before the peak of a drawdown against windows far from any (suggested by an external review).
+- [x] Hypothesis for 2008–09 from a second review, declared with its two predictions before it was computed; both hold.
+- [ ] A new question, pre-registered as this one: early warning, windows that end before the peak of a drawdown against windows far from any (suggested by an external review), stating which part of the label is known when each window ends and leaving out of the evaluation the windows within a fixed horizon of a peak or a trough.
 
 ## References
 
