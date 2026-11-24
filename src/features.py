@@ -49,6 +49,29 @@ def landscape_norms(diagrams: np.ndarray, orders: tuple[int, ...] = (1, 2)) -> n
          for p in orders], axis=1)
 
 
+def total_persistence_norms(diagrams: np.ndarray, dims: tuple[int, ...] = (0, 1),
+                            orders: tuple[int, ...] = (1, 2)) -> np.ndarray:
+    """The landscape norms of ``landscape_norms``, summed over all layers, in closed form: one column
+    per order p and homology dimension, in that order.
+
+    Lemma. Summing over all layers, sum_k lambda_k(x)^p = sum_a f_a(x)^p, since the layers at x are
+    the tent values f_a(x) of the points of the diagram in decreasing order. A tent of half-height
+    h = (d - b)/2 integrates to 2 h^(p+1)/(p+1), so
+
+        ||lambda||_p^p = sum_a (d_a - b_a)^(p+1) / (2^p (p + 1)),
+
+    a total persistence of order p + 1 (Cohen-Steiner, Edelsbrunner, Harer & Mileyko, 2010). It
+    needs no grid: on raw returns, whose scale changes tenfold between calm and crisis, a grid
+    common to every window resolves the small diagrams of calm windows with a handful of points.
+    Points padded onto the diagonal have zero persistence and add nothing."""
+    out = []
+    for p in orders:
+        for q in dims:
+            pers = np.where(diagrams[:, :, 2] == q, diagrams[:, :, 1] - diagrams[:, :, 0], 0.0)
+            out.append((np.sum(pers ** (p + 1), axis=1) / (2 ** p * (p + 1))) ** (1 / p))
+    return np.stack(out, axis=1)
+
+
 def stack_features(*feature_matrices: np.ndarray) -> np.ndarray:
     return np.concatenate([f.reshape(f.shape[0], -1) for f in feature_matrices], axis=1)
 
@@ -81,6 +104,22 @@ def correlation_spectrum(windows: np.ndarray) -> np.ndarray:
     out = np.empty((windows.shape[0], d))
     for i, w in enumerate(windows):
         out[i] = np.linalg.eigvalsh(np.corrcoef(w, rowvar=False))[::-1] / d
+    return out
+
+
+def covariance_spectrum(windows: np.ndarray) -> np.ndarray:
+    """All eigenvalues of the sample covariance matrix of each window (raw returns, divisor
+    n - 1), in decreasing order. Shape (n_windows, n_assets).
+
+    The complete Gaussian control for topology computed on raw, unstandardised windows, as
+    Gidea & Katz (2018) compute it. For independent Gaussian days, the centred window is a
+    uniformly random frame times the square root of its sample covariance, so the distances
+    between its days depend on everything else only through these eigenvalues
+    (scripts/spectrum_check.py states and checks the standardised case, whose control is
+    ``correlation_spectrum``)."""
+    out = np.empty((windows.shape[0], windows.shape[2]))
+    for i, w in enumerate(windows):
+        out[i] = np.linalg.eigvalsh(np.cov(w, rowvar=False))[::-1]
     return out
 
 
