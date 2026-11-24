@@ -4,8 +4,8 @@ type: software
 title: "TDA on financial time series: regime change detection"
 abstract: "Persistent homology of sliding windows of daily returns, scored against realised volatility and the correlation spectrum on leakage-free folds. The project contains: an exact result on what the topology of a standardised Gaussian window can see (only its sample correlation spectrum), checked with spectral surrogates; a pre-registered crisis-detection study (versions 0.1-0.2), whose success criterion is not met and whose market test could say little, since every feature ignores the sign of the returns while the drawdown label does not; and a replication of Gidea & Katz (2018) on four US indices, in which the rise of the landscape norms before Lehman replicates but realised volatility rises as much, and the rise before the 2000 peak does not replicate. Version 0.3.0 archives the plan of a second pre-registered study, early warning before nine drawdowns of the S&P 500 of 15 % or more, fixed before any of its statistics was computed on market data."
 authors:
-  - given-names: "Camilo Andrés"
-    family-names: "Rozo Lozano"
+  - given-names: "Camilo A."
+    family-names: "Rozo L."
     affiliation: "Universidad Nacional de Colombia"
     email: rozol.ca555@gmail.com
 repository-code: "https://github.com/crozol/05-tda-finance"
