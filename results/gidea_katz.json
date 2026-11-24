@@ -1,0 +1,234 @@
+{
+ "first_day": "1992-01-03",
+ "last_day": "2016-12-08",
+ "windows": {
+  "50": {
+   "correlation with volatility (Spearman)": {
+    "L1": 0.4680333841024172,
+    "L2": 0.4955095158619277
+   },
+   "statistics": {
+    "L1 \u00b7 variance": {
+     "dot-com": {
+      "tau": -0.22994377510040165,
+      "base rate": 0.5391621129326047
+     },
+     "Lehman": {
+      "tau": 0.8876144578313254,
+      "base rate": 0.044626593806921674
+     }
+    },
+    "L1 \u00b7 autocorrelation": {
+     "dot-com": {
+      "tau": -0.7779277108433736,
+      "base rate": 0.9744758432087511
+     },
+     "Lehman": {
+      "tau": 0.4148755020080322,
+      "base rate": 0.2889699179580675
+     }
+    },
+    "L1 \u00b7 spectral density": {
+     "dot-com": {
+      "tau": -0.32086746987951814,
+      "base rate": 0.6010928961748634
+     },
+     "Lehman": {
+      "tau": 0.8869076305220885,
+      "base rate": 0.03460837887067395
+     }
+    },
+    "L2 \u00b7 variance": {
+     "dot-com": {
+      "tau": -0.4032449799196788,
+      "base rate": 0.5846994535519126
+     },
+     "Lehman": {
+      "tau": 0.9131887550200803,
+      "base rate": 0.031876138433515486
+     }
+    },
+    "L2 \u00b7 autocorrelation": {
+     "dot-com": {
+      "tau": -0.7690602409638555,
+      "base rate": 0.9799453053783045
+     },
+     "Lehman": {
+      "tau": 0.49564658634538156,
+      "base rate": 0.2324521422060164
+     }
+    },
+    "L2 \u00b7 spectral density": {
+     "dot-com": {
+      "tau": -0.4607550200803213,
+      "base rate": 0.6812386156648452
+     },
+     "Lehman": {
+      "tau": 0.9352931726907632,
+      "base rate": 0.004553734061930784
+     }
+    },
+    "volatility \u00b7 variance": {
+     "dot-com": {
+      "tau": -0.9430682730923696,
+      "base rate": 0.9526411657559198
+     },
+     "Lehman": {
+      "tau": 0.9843212851405623,
+      "base rate": 0.025500910746812388
+     }
+    },
+    "volatility \u00b7 autocorrelation": {
+     "dot-com": {
+      "tau": 0.10637751004016065,
+      "base rate": 0.5587967183226983
+     },
+     "Lehman": {
+      "tau": 0.7664899598393575,
+      "base rate": 0.09480401093892434
+     }
+    },
+    "volatility \u00b7 spectral density": {
+     "dot-com": {
+      "tau": -0.9722409638554219,
+      "base rate": 0.9735883424408015
+     },
+     "Lehman": {
+      "tau": 0.9928674698795182,
+      "base rate": 0.025500910746812388
+     }
+    }
+   }
+  },
+  "100": {
+   "correlation with volatility (Spearman)": {
+    "L1": 0.6329338242497127,
+    "L2": 0.6486069229802247
+   },
+   "statistics": {
+    "L1 \u00b7 variance": {
+     "dot-com": {
+      "tau": -0.6318714859437752,
+      "base rate": 0.7987132352941176
+     },
+     "Lehman": {
+      "tau": 0.9516144578313254,
+      "base rate": 0.04411764705882353
+     }
+    },
+    "L1 \u00b7 autocorrelation": {
+     "dot-com": {
+      "tau": -0.8956465863453816,
+      "base rate": 1.0
+     },
+     "Lehman": {
+      "tau": 0.7777991967871487,
+      "base rate": 0.11683532658693652
+     }
+    },
+    "L1 \u00b7 spectral density": {
+     "dot-com": {
+      "tau": -0.5907469879518074,
+      "base rate": 0.7794117647058824
+     },
+     "Lehman": {
+      "tau": 0.9443534136546186,
+      "base rate": 0.04503676470588235
+     }
+    },
+    "L2 \u00b7 variance": {
+     "dot-com": {
+      "tau": -0.8955823293172691,
+      "base rate": 0.9678308823529411
+     },
+     "Lehman": {
+      "tau": 0.9749397590361447,
+      "base rate": 0.030330882352941176
+     }
+    },
+    "L2 \u00b7 autocorrelation": {
+     "dot-com": {
+      "tau": -0.4378152610441768,
+      "base rate": 0.7506899724011039
+     },
+     "Lehman": {
+      "tau": 0.8667951807228916,
+      "base rate": 0.045078196872125116
+     }
+    },
+    "L2 \u00b7 spectral density": {
+     "dot-com": {
+      "tau": -0.8991807228915664,
+      "base rate": 0.96875
+     },
+     "Lehman": {
+      "tau": 0.9697991967871488,
+      "base rate": 0.02849264705882353
+     }
+    },
+    "volatility \u00b7 variance": {
+     "dot-com": {
+      "tau": -0.7169477911646587,
+      "base rate": 0.8428308823529411
+     },
+     "Lehman": {
+      "tau": 1.0,
+      "base rate": 0.04411764705882353
+     }
+    },
+    "volatility \u00b7 autocorrelation": {
+     "dot-com": {
+      "tau": -0.1776385542168675,
+      "base rate": 0.6770929162833487
+     },
+     "Lehman": {
+      "tau": 0.918971887550201,
+      "base rate": 0.06899724011039558
+     }
+    },
+    "volatility \u00b7 spectral density": {
+     "dot-com": {
+      "tau": -0.704995983935743,
+      "base rate": 0.828125
+     },
+     "Lehman": {
+      "tau": 1.0,
+      "base rate": 0.043198529411764705
+     }
+    }
+   }
+  }
+ },
+ "band sensitivity, L1, w = 50": {
+  "0.01": {
+   "dot-com": -0.6070040160642571,
+   "Lehman": 0.6902168674698796
+  },
+  "0.02": {
+   "dot-com": -0.3404016064257029,
+   "Lehman": 0.8371084337349398
+  },
+  "0.05": {
+   "dot-com": -0.32086746987951814,
+   "Lehman": 0.8869076305220885
+  },
+  "0.1": {
+   "dot-com": -0.2849477911646587,
+   "Lehman": 0.8807389558232933
+  },
+  "0.2": {
+   "dot-com": -0.25783132530120484,
+   "Lehman": 0.8793253012048194
+  },
+  "0.5": {
+   "dot-com": -0.22994377510040165,
+   "Lehman": 0.8876144578313254
+  }
+ },
+ "reported by Gidea & Katz": {
+  "spectral density of L1, w = 50": {
+   "dot-com": 0.89,
+   "Lehman": 1.0
+  }
+ }
+}
