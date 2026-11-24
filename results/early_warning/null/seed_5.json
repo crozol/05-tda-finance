@@ -1,0 +1,327 @@
+{
+ "scenario": "null",
+ "seed": 5,
+ "n_windows": 1748,
+ "n_positive": 108,
+ "n_negative": 1023,
+ "comparisons": {
+  "primary": {
+   "S": 0.002814561809020882,
+   "dAUC": -0.0019774400367666848,
+   "wins": 2,
+   "scorable": 9,
+   "AUC control": 0.7567382689909291,
+   "blocks": [
+    {
+     "episode": 0,
+     "scorable": true,
+     "n_positive": 12,
+     "n_negative": 310,
+     "dLL": -0.052866229299486124,
+     "dAUC": -0.030094086021505363,
+     "AUC control": 0.6591532258064516,
+     "AUC combined": 0.6290591397849463,
+     "dAUC sd": 0.021346904353351855
+    },
+    {
+     "episode": 1,
+     "scorable": true,
+     "n_positive": 12,
+     "n_negative": 56,
+     "dLL": -0.06772479908120954,
+     "dAUC": -0.01130952380952378,
+     "AUC control": 0.9101190476190476,
+     "AUC combined": 0.898809523809524,
+     "dAUC sd": 0.006951527000537624
+    },
+    {
+     "episode": 2,
+     "scorable": true,
+     "n_positive": 12,
+     "n_negative": 165,
+     "dLL": -0.008800861343406985,
+     "dAUC": -0.017979797979797964,
+     "AUC control": 0.806060606060606,
+     "AUC combined": 0.7880808080808082,
+     "dAUC sd": 0.01224960063468527
+    },
+    {
+     "episode": 3,
+     "scorable": true,
+     "n_positive": 12,
+     "n_negative": 9,
+     "dLL": 0.06112338269848942,
+     "dAUC": 0.03888888888888886,
+     "AUC control": 0.6694444444444445,
+     "AUC combined": 0.7083333333333333,
+     "dAUC sd": 0.05067747099203403
+    },
+    {
+     "episode": 4,
+     "scorable": true,
+     "n_positive": 12,
+     "n_negative": 141,
+     "dLL": 0.02852938097107103,
+     "dAUC": 0.024940898345153683,
+     "AUC control": 0.8371158392434989,
+     "AUC combined": 0.8620567375886525,
+     "dAUC sd": 0.00918476817845644
+    },
+    {
+     "episode": 5,
+     "scorable": true,
+     "n_positive": 12,
+     "n_negative": 162,
+     "dLL": 0.004466864797489289,
+     "dAUC": -0.002777777777777768,
+     "AUC control": 0.8121399176954732,
+     "AUC combined": 0.8093621399176956,
+     "dAUC sd": 0.009709376334258597
+    },
+    {
+     "episode": 6,
+     "scorable": true,
+     "n_positive": 12,
+     "n_negative": 29,
+     "dLL": -0.006007984732176763,
+     "dAUC": -0.07456896551724138,
+     "AUC control": 0.4833333333333333,
+     "AUC combined": 0.40876436781609193,
+     "dAUC sd": 0.02140167004575794
+    },
+    {
+     "episode": 7,
+     "scorable": true,
+     "n_positive": 12,
+     "n_negative": 39,
+     "dLL": 0.021652450538535716,
+     "dAUC": 0.010683760683760712,
+     "AUC control": 0.7412393162393163,
+     "AUC combined": 0.7519230769230769,
+     "dAUC sd": 0.012254024596926772
+    },
+    {
+     "episode": 8,
+     "scorable": true,
+     "n_positive": 12,
+     "n_negative": 112,
+     "dLL": 0.044958851731881876,
+     "dAUC": 0.044419642857142824,
+     "AUC control": 0.8920386904761906,
+     "AUC combined": 0.9364583333333334,
+     "dAUC sd": 0.010615832657591405
+    }
+   ]
+  },
+  "walk-forward": {
+   "S": 0.052439925629515494,
+   "dAUC": -0.004992346866840561,
+   "wins": 3,
+   "scorable": 8,
+   "AUC control": 0.6626147318563487,
+   "blocks": [
+    {
+     "episode": 0,
+     "scorable": false
+    },
+    {
+     "episode": 1,
+     "scorable": true,
+     "n_positive": 12,
+     "n_negative": 56,
+     "dLL": 0.016367291283158857,
+     "dAUC": -0.011458333333333348,
+     "AUC control": 0.8226190476190476,
+     "AUC combined": 0.8111607142857142,
+     "dAUC sd": 0.01599731219747433
+    },
+    {
+     "episode": 2,
+     "scorable": true,
+     "n_positive": 12,
+     "n_negative": 165,
+     "dLL": 0.1096945039250001,
+     "dAUC": -0.014772727272727281,
+     "AUC control": 0.6904040404040404,
+     "AUC combined": 0.6756313131313132,
+     "dAUC sd": 0.05155656908793041
+    },
+    {
+     "episode": 3,
+     "scorable": true,
+     "n_positive": 12,
+     "n_negative": 9,
+     "dLL": 0.14101074100362412,
+     "dAUC": -0.041666666666666664,
+     "AUC control": 0.16574074074074077,
+     "AUC combined": 0.12407407407407409,
+     "dAUC sd": 0.03302613357875417
+    },
+    {
+     "episode": 4,
+     "scorable": true,
+     "n_positive": 12,
+     "n_negative": 141,
+     "dLL": 0.02575464795941167,
+     "dAUC": 0.012529550827423186,
+     "AUC control": 0.7982860520094563,
+     "AUC combined": 0.8108156028368795,
+     "dAUC sd": 0.009998102729862743
+    },
+    {
+     "episode": 5,
+     "scorable": true,
+     "n_positive": 12,
+     "n_negative": 162,
+     "dLL": 0.036555568970777344,
+     "dAUC": 0.01820987654320987,
+     "AUC control": 0.80869341563786,
+     "AUC combined": 0.82690329218107,
+     "dAUC sd": 0.013072547596232529
+    },
+    {
+     "episode": 6,
+     "scorable": true,
+     "n_positive": 12,
+     "n_negative": 29,
+     "dLL": 0.028277744137553594,
+     "dAUC": -0.04741379310344827,
+     "AUC control": 0.38189655172413794,
+     "AUC combined": 0.33448275862068966,
+     "dAUC sd": 0.019323985633938723
+    },
+    {
+     "episode": 7,
+     "scorable": true,
+     "n_positive": 12,
+     "n_negative": 39,
+     "dLL": 0.016900056024716326,
+     "dAUC": 0.00021367521367519072,
+     "AUC control": 0.7412393162393163,
+     "AUC combined": 0.7414529914529915,
+     "dAUC sd": 0.01587696146029865
+    },
+    {
+     "episode": 8,
+     "scorable": true,
+     "n_positive": 12,
+     "n_negative": 112,
+     "dLL": 0.044958851731881876,
+     "dAUC": 0.044419642857142824,
+     "AUC control": 0.8920386904761906,
+     "AUC combined": 0.9364583333333334,
+     "dAUC sd": 0.010615832657591405
+    }
+   ]
+  },
+  "standardised": {
+   "S": -0.010956586571325738,
+   "dAUC": -0.000998147342283119,
+   "wins": 3,
+   "scorable": 9,
+   "AUC control": 0.7144383576624287,
+   "blocks": [
+    {
+     "episode": 0,
+     "scorable": true,
+     "n_positive": 12,
+     "n_negative": 310,
+     "dLL": -0.03540594468471723,
+     "dAUC": -0.040201612903225784,
+     "AUC control": 0.6558064516129032,
+     "AUC combined": 0.6156048387096774,
+     "dAUC sd": 0.013924317456477682
+    },
+    {
+     "episode": 1,
+     "scorable": true,
+     "n_positive": 12,
+     "n_negative": 56,
+     "dLL": -0.15110523674685736,
+     "dAUC": -0.04999999999999997,
+     "AUC control": 0.9193452380952382,
+     "AUC combined": 0.8693452380952381,
+     "dAUC sd": 0.014431029004736702
+    },
+    {
+     "episode": 2,
+     "scorable": true,
+     "n_positive": 12,
+     "n_negative": 165,
+     "dLL": -0.09148453136237095,
+     "dAUC": -0.037070707070707073,
+     "AUC control": 0.7946969696969697,
+     "AUC combined": 0.7576262626262626,
+     "dAUC sd": 0.017586268255725925
+    },
+    {
+     "episode": 3,
+     "scorable": true,
+     "n_positive": 12,
+     "n_negative": 9,
+     "dLL": -0.03330602384859662,
+     "dAUC": -0.010185185185185196,
+     "AUC control": 0.475925925925926,
+     "AUC combined": 0.46574074074074084,
+     "dAUC sd": 0.018748571047515372
+    },
+    {
+     "episode": 4,
+     "scorable": true,
+     "n_positive": 12,
+     "n_negative": 141,
+     "dLL": -0.03091789887362052,
+     "dAUC": 0.05384160756501181,
+     "AUC control": 0.8125886524822695,
+     "AUC combined": 0.8664302600472814,
+     "dAUC sd": 0.018746500846209695
+    },
+    {
+     "episode": 5,
+     "scorable": true,
+     "n_positive": 12,
+     "n_negative": 162,
+     "dLL": 0.003534839606883844,
+     "dAUC": 0.018158436213991724,
+     "AUC control": 0.788940329218107,
+     "AUC combined": 0.8070987654320987,
+     "dAUC sd": 0.012136841542173163
+    },
+    {
+     "episode": 6,
+     "scorable": true,
+     "n_positive": 12,
+     "n_negative": 29,
+     "dLL": 0.12541400679046438,
+     "dAUC": -0.0030172413793103483,
+     "AUC control": 0.440948275862069,
+     "AUC combined": 0.4379310344827586,
+     "dAUC sd": 0.021315758032359997
+    },
+    {
+     "episode": 7,
+     "scorable": true,
+     "n_positive": 12,
+     "n_negative": 39,
+     "dLL": 0.09715623543737767,
+     "dAUC": 0.062393162393162435,
+     "AUC control": 0.6260683760683762,
+     "AUC combined": 0.6884615384615385,
+     "dAUC sd": 0.017440691667194492
+    },
+    {
+     "episode": 8,
+     "scorable": true,
+     "n_positive": 12,
+     "n_negative": 112,
+     "dLL": 0.017505274539505112,
+     "dAUC": -0.002901785714285665,
+     "AUC control": 0.915625,
+     "AUC combined": 0.9127232142857142,
+     "dAUC sd": 0.006424042012267989
+    }
+   ]
+  }
+ },
+ "seconds": 1896.2
+}
