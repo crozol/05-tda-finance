@@ -2,13 +2,12 @@
 
 Written on 2026-11-19. The first result on market data (analysis plan v0.1.2, commit caf7aaa)
 did not meet the pre-registered success criterion; that verdict stands, and nothing here changes
-it. An external review of plan v0.1.2, written before it saw that result, showed that the
-criterion has almost no power where it matters: on synthetic crises that change volatility,
-correlation and the tails at once (the heavy-tailed scenario of scripts/calibrate_plan.py), where
-topology does have something to see, the primary comparison passed in 0 of 20 datasets. The
-review traced this to the ceiling of the ROC-AUC: the baselines already separate the crisis
-windows almost perfectly, so an added predictor can raise it by little. The analyses below,
-proposed by that review, measure what the market data can and cannot say. They were written down
+it. The criterion has almost no power where it matters: on synthetic crises that change
+volatility, correlation and the tails at once (the heavy-tailed scenario of
+scripts/calibrate_plan.py), where topology does have something to see, the primary comparison
+passed in 0 of 20 datasets. The reason is the ceiling of the ROC-AUC: the baselines already
+separate the crisis windows almost perfectly, so an added predictor can raise it by little. The
+analyses below measure what the market data can and cannot say. They were written down
 and pushed before any of them was computed, on synthetic or market data, and every number they
 produce is reported, whatever it shows.
 

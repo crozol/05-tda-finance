@@ -1,26 +1,24 @@
 """Hypothesis for 2008-09, added after the result and declared here before any of it was computed.
 
-Written on 2026-11-21 at the request of the external review of that day, which read the results of
-scripts/direction_diagnostic.py. Under leave-one-crisis-out, the realised volatility separates the
-crisis windows of the 2008-09 block from its normal windows (ROC-AUC 0.875; 1.00 against the windows
-that end before the crisis), but the forest on volatility alone, trained on the other crises, does
-not (0.553; 0.714 against the windows before; results/direction_diagnostic.json). The review's
-hypothesis, translated from its Spanish: "The rebound windows of the other crises are also labelled
-normal in the training folds. In 2020 those windows have the highest volatility of the whole sample,
-2 to 5 % daily, with a normal label. A forest then learns a non-monotone relation: medium-high
-volatility -> crisis, very high volatility -> normal. So it scores low the October-November 2008
-windows, at 4-5.5 %, which are crisis. The logistic regression is monotone and cannot learn that
-shape; hence its 0.875." In figures/features_timeseries.png the highest volatility of the sample is
-inside the 2008-09 crisis, which this fold holds out; the run lists the training windows above 4 %.
+Written on 2026-11-21, after the results of scripts/direction_diagnostic.py. Under
+leave-one-crisis-out, the realised volatility separates the crisis windows of the 2008-09 block from
+its normal windows (ROC-AUC 0.875; 1.00 against the windows that end before the crisis), but the
+forest on volatility alone, trained on the other crises, does not (0.553; 0.714 against the windows
+before; results/direction_diagnostic.json). The hypothesis: the rebound windows of the other crises
+are also labelled normal in the training folds. In 2020 those windows have the highest volatility of
+the whole sample, 2 to 5 % daily, with a normal label. A forest can then learn a non-monotone
+relation, medium-high volatility -> crisis and very high volatility -> normal, and score low the
+October-November 2008 windows, at 4-5.5 %, which are crisis. The logistic regression is monotone and
+cannot learn that shape; hence its 0.875. In figures/features_timeseries.png the highest volatility
+of the sample is inside the 2008-09 crisis, which this fold holds out; the run lists the training
+windows above 4 %.
 
-The review's two predictions, with its thresholds (translated):
-1. "In the leave-one-crisis-out fold of 2008-09, evaluate the forest on volatility on a grid of
-   values. Prediction: the mean crisis probability for volatility >= 4 % is lower than for the
-   range 2-3 %."
-2. "Retrain that fold without the 2020 rebound windows (the 12 after 23 March 2020). Prediction: the
-   forest's AUC against the earlier windows rises from 0.71 to >= 0.9."
-"If both fail, the hypothesis is wrong and 2008-09 remains an unexplained failure of transfer, which
-is what the README says today."
+The two predictions, with their thresholds:
+1. In the leave-one-crisis-out fold of 2008-09, evaluate the forest on volatility on a grid of
+   values: the mean crisis probability for volatility >= 4 % is lower than for the range 2-3 %.
+2. Retrain that fold without the 2020 rebound windows (the 12 after 23 March 2020): the forest's AUC
+   against the earlier windows rises from 0.71 to >= 0.9.
+If both fail, the hypothesis is wrong and 2008-09 remains an unexplained failure of transfer.
 
 How they are computed, fixed here. Data, windows, labels, fold and forests are those of the plan
 (scripts/run_plan.py): the frozen prices; 40-day windows with a 5-day step, labelled by their last
@@ -42,7 +40,7 @@ daily, as on the figure).
   of the block that end before them is at least 0.9. With the full training set it is 0.714, which
   this run must reproduce.
 - Reading. Each prediction is reported as holding or not. If both hold, the hypothesis accounts for
-  2008-09; if both fail, it is wrong, as the review says; if only one holds, that is reported and
+  2008-09; if both fail, it is wrong; if only one holds, that is reported and
   nothing more is concluded. Nothing here changes the verdict of the plan or the reading of
   scripts/post_result.py.
 

@@ -1,13 +1,12 @@
 """Direction diagnostic, added after the result and declared here before any of it was computed.
 
-Written on 2026-11-20, after the analyses of scripts/post_result.py, at the request of an external
-review of that day. The review argues that the result on market data is inconclusive by
-construction. Every feature of the comparison, the baselines included, is unchanged when every
-return r becomes -r and when the days of a window are reordered (src/features.py,
-src/persistence.py), while the label, being inside a peak-to-trough drawdown, depends on the
-direction of the market. Inside the held-out blocks, it adds, the normal windows after the trough
-are rebounds as volatile and as correlated as the crisis, and the windows that end just after the
-trough still contain its most turbulent days. Nothing here changes the verdict of the plan
+Written on 2026-11-20, after the analyses of scripts/post_result.py. The hypothesis: the result on
+market data is inconclusive by construction. Every feature of the comparison, the baselines
+included, is unchanged when every return r becomes -r and when the days of a window are reordered
+(src/features.py, src/persistence.py), while the label, being inside a peak-to-trough drawdown,
+depends on the direction of the market. Inside the held-out blocks, moreover, the normal windows
+after the trough are rebounds as volatile and as correlated as the crisis, and the windows that end
+just after the trough still contain its most turbulent days. Nothing here changes the verdict of the plan
 (criterion not met) or the reading of scripts/post_result.py; every number below is reported,
 whatever it shows, and counts for nothing.
 
@@ -17,24 +16,23 @@ windows (60 trading days) on either side, leave-one-crisis-out and the past-only
 random forests of 300 trees with seeds 0-9. The normal windows of a block are split into those
 that end before its first crisis window ("before") and those that end after its last ("after").
 
-1. The review's diagnostic. For every block, the ROC-AUC of the crisis windows against the windows
+1. The diagnostic. For every block, the ROC-AUC of the crisis windows against the windows
    before, and against the windows after, for two scores of volatility alone: (i) the forest on
    volatility alone, the "volatility alone" of the README (the mean over the seeds of each seed's
    AUC, as in the plan), and (ii) the realised volatility itself, with no model. And, for every
    block, the ROC-AUC of the forest on the baselines plus the mean return of the window (the mean
    of its daily log returns over days and assets, which changes sign with r) next to that of the
    baselines alone (spectrum + volatility).
-2. Added by us: the primary comparison with the mean return on both sides, topology + spectrum +
+2. Also: the primary comparison with the mean return on both sides, topology + spectrum +
    volatility + mean return against spectrum + volatility + mean return. ΔAUC per block, its mean
    and standard deviation over the seeds, and a win when the mean exceeds the standard deviation
    (the plan's rule).
 
-The review's prediction, written before any of this was run (translated from its Spanish): "AUC
-against the earlier neighbours >= 0.8, and against the later ones <= 0.5, in 2008-09, Q4 2018 and
-2020; with the mean of the returns, the AUC per block rises substantially. If it holds, the
-mechanism is established with your own data. If not, my explanation is wrong and another must be
-sought." Its first part is checked under leave-one-crisis-out, the scheme of the review's table,
-for each of the two scores of volatility: it holds for a score when, in each of the three
+The prediction, written before any of this was run: AUC against the earlier neighbours >= 0.8, and
+against the later ones <= 0.5, in 2008-09, Q4 2018 and 2020; with the mean of the returns, the AUC
+per block rises substantially. If it holds, the mechanism is established; if not, another
+explanation must be sought. Its first part is checked under leave-one-crisis-out, for each of the
+two scores of volatility: it holds for a score when, in each of the three
 episodes, the AUC against the windows before is at least 0.8 and against the windows after at
 most 0.5. The second part names no threshold; its numbers are reported.
 
@@ -77,7 +75,7 @@ MEAN = "mean return"
 WITH_MEAN = f"{BASELINE} + {MEAN}"                 # the baselines plus the mean return
 COMBINED_MEAN = f"{COMBINED} + {MEAN}"             # the combined model plus the mean return
 PREDICTED = ("global financial crisis", "q4 2018 selloff", "covid crash")
-BEFORE_MIN, AFTER_MAX = 0.8, 0.5                   # the review's prediction
+BEFORE_MIN, AFTER_MAX = 0.8, 0.5                   # the prediction
 SCORES = ("volatility, forest", "volatility, raw")
 PARTS = ("all", "before", "after")
 
@@ -127,7 +125,7 @@ def fold_scores(make_model, X: np.ndarray, y: np.ndarray, splits: list) -> list:
 
 
 def prediction(table: dict) -> dict:
-    """The first part of the review's prediction, for each score of volatility alone."""
+    """The first part of the prediction, for each score of volatility alone."""
     out = {}
     for score in SCORES:
         per = {}
